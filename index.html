@@ -117,9 +117,19 @@ label input:focus, label textarea:focus { outline: 2px solid var(--accent); outl
 
 .none { color: var(--muted); padding: 24px 0; }
 
+/* Phones: compact two-column cards (slot + name only) so about three full banks fit on screen. */
 @media (max-width: 560px) {
-  .cards { grid-template-columns: 1fr; }
+  header { margin-bottom: 16px; }
   input[type=search] { width: 100%; }
+  .bank { margin-bottom: 16px; }
+  .bank h2 { margin-bottom: 6px; }
+  .bank.bare + .bank:not(.bare) { margin-top: 12px; }
+  .cards { gap: 6px; }
+  .card, .card.empty { padding: 8px 10px; border-radius: 8px; }
+  .card-head { gap: 8px; }
+  .card .id { font-size: 0.8rem; }
+  .card .name, .card.empty .name { font-size: 0.95rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; overflow-wrap: normal; min-width: 0; }
+  .card .style, .card .notes { display: none; }
 }
 </style>
 </head>
