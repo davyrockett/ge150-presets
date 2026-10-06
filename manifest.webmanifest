@@ -1,0 +1,16 @@
+{
+  "id": "./",
+  "name": "GE150 Presets",
+  "short_name": "Presets",
+  "description": "The presets on my Mooer GE150 Pro Li, bank by bank.",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "background_color": "#141413",
+  "theme_color": "#141413",
+  "icons": [
+    { "src": "icons/icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any" },
+    { "src": "icons/icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any" },
+    { "src": "icons/icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" }
+  ]
+}

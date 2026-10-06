@@ -1,0 +1,373 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>GE150 Presets</title>
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" href="icons/icon-192.png">
+<link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="Presets">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="theme-color" content="#f2f1ee" media="(prefers-color-scheme: light)">
+<meta name="theme-color" content="#141413" media="(prefers-color-scheme: dark)">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@500;600&display=swap">
+<style>
+/* Layout: one section per bank; a bank with presets shows big A–D cards (2×2) with notes;
+   an empty bank collapses to a single line of small slot buttons. */
+:root {
+  --bg: #f2f1ee;
+  --surface: #ffffff;
+  --fg: #1d1d1b;
+  --muted: #6b6a65;
+  --line: #dcdad4;
+  --accent: #c2410c;
+  --accent-soft: #fbe6d9;
+  --empty: #a9a7a0;
+  --danger: #b42318;
+  --body: "IBM Plex Sans", system-ui, -apple-system, sans-serif;
+  --mono: "IBM Plex Mono", ui-monospace, Menlo, monospace;
+}
+@media (prefers-color-scheme: dark) {
+  :root {
+    --bg: #141413; --surface: #1d1d1b; --fg: #ecebe6; --muted: #9c9a93; --line: #34332f;
+    --accent: #fb923c; --accent-soft: #3a2416; --empty: #5c5a55; --danger: #f08a80;
+    color-scheme: dark;
+  }
+}
+* { box-sizing: border-box; }
+[hidden] { display: none !important; }
+body { margin: 0; background: var(--bg); color: var(--fg); font-family: var(--body); font-size: 16px; line-height: 1.5;
+  -webkit-text-size-adjust: 100%; }
+.wrap { max-width: 760px; margin: 0 auto;
+  padding: calc(28px + env(safe-area-inset-top, 0px)) 16px calc(64px + env(safe-area-inset-bottom, 0px)); }
+
+header { display: flex; align-items: flex-end; justify-content: space-between; gap: 16px; flex-wrap: wrap; margin-bottom: 28px; }
+h1 { font-size: 1.6rem; font-weight: 600; letter-spacing: -0.01em; margin: 0; text-wrap: balance; }
+header p { margin: 2px 0 0; color: var(--muted); font-size: 0.9rem; }
+input[type=search] {
+  font: inherit; font-size: 1rem; width: 240px; max-width: 100%; padding: 8px 12px;
+  border: 1px solid var(--line); border-radius: 8px; background: var(--surface); color: var(--fg);
+}
+input[type=search]:focus { outline: 2px solid var(--accent); outline-offset: 1px; border-color: transparent; }
+
+.bank { margin-bottom: 32px; }
+.bank h2 { font-family: var(--mono); font-size: 0.85rem; font-weight: 600; color: var(--muted);
+  text-transform: uppercase; letter-spacing: 0.06em; margin: 0 0 10px; }
+.cards { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+
+.card { background: var(--surface); border: 1px solid var(--line); border-radius: 12px; padding: 16px 18px;
+  min-width: 0; font: inherit; color: inherit; text-align: left; width: 100%; cursor: pointer; }
+.card:hover { border-color: var(--accent); }
+.card-head { display: flex; align-items: baseline; gap: 10px; }
+.card .id { font-family: var(--mono); font-weight: 600; color: var(--accent); font-size: 0.95rem; }
+.card .name { font-size: 1.2rem; font-weight: 600; margin: 0; overflow-wrap: anywhere; }
+.card .style { display: inline-block; margin-top: 6px; font-size: 0.78rem; font-weight: 500;
+  color: var(--accent); background: var(--accent-soft); padding: 1px 8px; border-radius: 99px; }
+.card .notes { margin: 10px 0 0; white-space: pre-wrap; overflow-wrap: anywhere; }
+.card .notes.blank { color: var(--empty); font-size: 0.9rem; }
+.card.empty { background: transparent; border-style: dashed; padding: 12px 18px; }
+.card.empty .id { color: var(--empty); }
+.card.empty .name { color: var(--empty); font-weight: 400; font-size: 1rem; }
+.card.match { border-color: var(--accent); box-shadow: 0 0 0 1px var(--accent); }
+.card:focus-visible, .chip:focus-visible, .btn:focus-visible, .link:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+
+.bank.bare { margin-bottom: 0; border-top: 1px solid var(--line); padding: 6px 0;
+  display: flex; gap: 12px; align-items: center; }
+.bank.bare h2 { margin: 0; color: var(--empty); width: 64px; flex: none; }
+.chips { display: flex; gap: 6px; flex-wrap: wrap; }
+.chip { font-family: var(--mono); font-size: 0.78rem; font-weight: 500; color: var(--muted); cursor: pointer;
+  background: transparent; border: 1px dashed var(--line); border-radius: 6px; padding: 2px 8px; }
+.chip:hover { color: var(--accent); border-color: var(--accent); border-style: solid; }
+.bank.bare + .bank:not(.bare) { margin-top: 24px; }
+
+footer { margin-top: 40px; display: flex; gap: 16px; flex-wrap: wrap; align-items: center; color: var(--muted); font-size: 0.85rem; }
+.link { font: inherit; background: none; border: 0; padding: 0; color: var(--accent); cursor: pointer; text-decoration: underline; text-underline-offset: 2px; }
+
+dialog { border: 1px solid var(--line); border-radius: 14px; padding: 0; width: min(480px, calc(100vw - 32px));
+  background: var(--surface); color: var(--fg); }
+dialog::backdrop { background: rgb(0 0 0 / 0.45); }
+form { display: grid; gap: 14px; padding: 20px; }
+.f-head { display: flex; align-items: baseline; gap: 10px; }
+.f-head .id { font-family: var(--mono); font-weight: 600; font-size: 1.3rem; color: var(--accent); }
+.f-head h2 { margin: 0; font-size: 1.1rem; font-weight: 600; }
+label { display: grid; gap: 4px; font-size: 0.85rem; color: var(--muted); }
+label input, label textarea { font: inherit; font-size: 1rem; color: var(--fg); background: var(--bg);
+  border: 1px solid var(--line); border-radius: 8px; padding: 8px 10px; }
+label textarea { min-height: 110px; resize: vertical; }
+label input:focus, label textarea:focus { outline: 2px solid var(--accent); outline-offset: 0; border-color: transparent; }
+.actions { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
+.actions .spacer { flex: 1; }
+.btn { font: inherit; font-size: 0.95rem; font-weight: 500; border-radius: 8px; padding: 8px 16px; cursor: pointer;
+  border: 1px solid var(--line); background: transparent; color: var(--fg); }
+.btn.primary { background: var(--accent); border-color: var(--accent); color: var(--surface); }
+.btn.danger { color: var(--danger); border-color: transparent; padding-left: 4px; padding-right: 4px; }
+.btn.danger.armed { border-color: var(--danger); padding-left: 12px; padding-right: 12px; }
+
+.toast, .update { position: fixed; left: 50%; bottom: calc(24px + env(safe-area-inset-bottom, 0px)); transform: translateX(-50%);
+  background: var(--fg); color: var(--bg); font-size: 0.9rem; z-index: 20; }
+.toast { padding: 8px 16px; border-radius: 99px; opacity: 0; transition: opacity .2s; pointer-events: none; }
+.toast.show { opacity: 1; }
+.update { display: flex; gap: 12px; align-items: center; padding: 8px 8px 8px 16px; border-radius: 12px;
+  box-shadow: 0 6px 24px rgb(0 0 0 / 0.25); max-width: calc(100% - 32px); }
+@media (prefers-reduced-motion: reduce) { .toast { transition: none; } }
+
+.none { color: var(--muted); padding: 24px 0; }
+
+@media (max-width: 560px) {
+  .cards { grid-template-columns: 1fr; }
+  input[type=search] { width: 100%; }
+}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <div>
+      <h1>GE150 Pro Li Presets</h1>
+      <p id="count"></p>
+    </div>
+    <input type="search" id="q" placeholder="Search name, style, notes" aria-label="Search presets">
+  </header>
+  <div id="banks"></div>
+  <p class="none" id="none" hidden>No presets match.</p>
+  <footer>
+    <span>Presets are saved on this device.</span>
+    <button type="button" class="link" id="backup">Save a backup file</button>
+    <button type="button" class="link" id="restore">Restore from backup</button>
+    <input type="file" id="restore-file" accept=".json,application/json" hidden>
+  </footer>
+</div>
+
+<dialog id="edit">
+  <form id="form">
+    <div class="f-head"><span class="id" id="f-id"></span><h2 id="f-title"></h2></div>
+    <label>Name <input id="f-name" autocomplete="off" required></label>
+    <label>Style <input id="f-style" autocomplete="off" placeholder="e.g. Clean, Crunch, Lead"></label>
+    <label>Notes <textarea id="f-notes" placeholder="Songs, settings, when to use it…"></textarea></label>
+    <div class="actions">
+      <button type="button" class="btn danger" id="f-clear">Clear slot</button>
+      <span class="spacer"></span>
+      <button type="button" class="btn" id="f-cancel">Cancel</button>
+      <button type="submit" class="btn primary">Save</button>
+    </div>
+  </form>
+</dialog>
+<div class="toast" id="toast" role="status"></div>
+<div class="update" id="update-banner" role="status" hidden><span>A new version is ready.</span><button type="button" class="btn primary" id="update-btn">Update</button></div>
+
+<script>
+const BANK_COUNT = 40;
+const SLOTS = ['A', 'B', 'C', 'D'];
+const KEY = 'ge150.presets';
+// What a brand-new device starts with.
+const STARTER = {
+  '2A': { name: 'Acoustic' },
+  '2B': { name: 'Dry Dirt' },
+  '2C': { name: 'Distortion' },
+  '2D': { name: 'Lying' },
+};
+const $ = id => document.getElementById(id);
+const banksEl = $('banks');
+let editing = null;
+
+function load() {
+  try {
+    const v = localStorage.getItem(KEY);
+    return v == null ? { ...STARTER } : JSON.parse(v);
+  } catch { return { ...STARTER }; }
+}
+let presets = load();
+
+function store() {
+  try { localStorage.setItem(KEY, JSON.stringify(presets)); return true; }
+  catch { return false; }
+}
+
+function el(tag, cls, text) {
+  const e = document.createElement(tag);
+  if (cls) e.className = cls;
+  if (text != null) e.textContent = text;
+  return e;
+}
+
+function card(id) {
+  const p = presets[id];
+  const c = el('button', p ? 'card' : 'card empty');
+  c.type = 'button';
+  c.dataset.id = id;
+  c.addEventListener('click', () => openEdit(id));
+  const head = el('div', 'card-head');
+  head.append(el('span', 'id', id), el('h3', 'name', p ? p.name : 'Empty'));
+  c.append(head);
+  if (p) {
+    if (p.style) c.append(el('span', 'style', p.style));
+    c.append(el('p', p.notes ? 'notes' : 'notes blank', p.notes || 'No notes yet'));
+  }
+  return c;
+}
+
+function render() {
+  $('count').textContent = `${BANK_COUNT} banks · ${Object.keys(presets).length} of ${BANK_COUNT * 4} slots saved`;
+  banksEl.innerHTML = '';
+  for (let b = 1; b <= BANK_COUNT; b++) {
+    const used = SLOTS.some(s => presets[b + s]);
+    const sec = el('section', used ? 'bank' : 'bank bare');
+    sec.append(el('h2', null, `Bank ${b}`));
+    if (used) {
+      const cards = el('div', 'cards');
+      for (const s of SLOTS) cards.append(card(b + s));
+      sec.append(cards);
+    } else {
+      const chips = el('div', 'chips');
+      for (const s of SLOTS) {
+        const chip = el('button', 'chip', b + s);
+        chip.type = 'button';
+        chip.setAttribute('aria-label', `Add a preset to ${b + s}`);
+        chip.addEventListener('click', () => openEdit(b + s));
+        chips.append(chip);
+      }
+      sec.append(chips);
+    }
+    banksEl.append(sec);
+  }
+  filter();
+}
+
+function openEdit(id) {
+  editing = id;
+  const p = presets[id] || {};
+  $('f-id').textContent = id;
+  $('f-title').textContent = p.name ? 'Edit preset' : 'New preset';
+  $('f-name').value = p.name || '';
+  $('f-style').value = p.style || '';
+  $('f-notes').value = p.notes || '';
+  $('f-clear').hidden = !p.name;
+  disarmClear();
+  $('edit').showModal();
+  $('f-name').focus();
+}
+
+function commit(message) {
+  $('edit').close();
+  render();
+  toast(store() ? message : "Couldn't save on this device. Is private browsing on?");
+}
+
+$('form').addEventListener('submit', e => {
+  e.preventDefault();
+  const name = $('f-name').value.trim();
+  if (!name) return;
+  const p = { name };
+  const style = $('f-style').value.trim(), notes = $('f-notes').value.trim();
+  if (style) p.style = style;
+  if (notes) p.notes = notes;
+  presets[editing] = p;
+  commit(`Saved ${editing}`);
+});
+
+// Clearing takes two taps: the first arms the button, the second clears.
+function disarmClear() {
+  $('f-clear').classList.remove('armed');
+  $('f-clear').textContent = 'Clear slot';
+}
+$('f-clear').addEventListener('click', () => {
+  const b = $('f-clear');
+  if (!b.classList.contains('armed')) {
+    b.classList.add('armed');
+    b.textContent = `Tap again to clear ${editing}`;
+    return;
+  }
+  delete presets[editing];
+  commit(`Cleared ${editing}`);
+});
+
+$('f-cancel').addEventListener('click', () => $('edit').close());
+
+function toast(text) {
+  const t = $('toast');
+  t.textContent = text;
+  t.classList.add('show');
+  clearTimeout(toast.timer);
+  toast.timer = setTimeout(() => t.classList.remove('show'), 2200);
+}
+
+function filter() {
+  const q = $('q').value.trim().toLowerCase();
+  let shown = 0;
+  for (const sec of banksEl.children) {
+    let hit = false;
+    for (const c of sec.querySelectorAll('.card')) {
+      const p = presets[c.dataset.id];
+      const m = !!q && !!p && [c.dataset.id, p.name, p.style, p.notes].join(' ').toLowerCase().includes(q);
+      c.classList.toggle('match', m);
+      hit = hit || m;
+    }
+    sec.hidden = !!q && !hit;
+    if (!q || hit) shown++;
+  }
+  $('none').hidden = shown > 0;
+}
+$('q').addEventListener('input', filter);
+
+// Backup: a small JSON file you can keep in Dropbox or move to another device.
+$('backup').addEventListener('click', () => {
+  const blob = new Blob([JSON.stringify({ app: 'ge150-presets', presets }, null, 2)], { type: 'application/json' });
+  const a = el('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = `GE150 presets ${new Date().toISOString().slice(0, 10)}.json`;
+  a.click();
+  setTimeout(() => URL.revokeObjectURL(a.href), 1000);
+});
+$('restore').addEventListener('click', () => $('restore-file').click());
+$('restore-file').addEventListener('change', async e => {
+  const file = e.target.files[0];
+  e.target.value = '';
+  if (!file) return;
+  try {
+    const data = JSON.parse(await file.text());
+    if (data.app !== 'ge150-presets' || typeof data.presets !== 'object') throw new Error();
+    presets = data.presets;
+    render();
+    toast(store() ? `Restored ${Object.keys(presets).length} presets` : "Couldn't save on this device.");
+  } catch {
+    toast("That file isn't a GE150 presets backup.");
+  }
+});
+
+render();
+</script>
+
+<script>
+// Offline support + update banner. See sw.js.
+(async () => {
+  if (!('serviceWorker' in navigator)) return;
+  const reg = await navigator.serviceWorker.register('sw.js');
+  const banner = document.getElementById('update-banner');
+  const offer = (worker) => {
+    banner.hidden = false;
+    document.getElementById('update-btn').onclick = () => worker.postMessage('skipWaiting');
+  };
+  if (reg.waiting && navigator.serviceWorker.controller) offer(reg.waiting);
+  reg.addEventListener('updatefound', () => {
+    const worker = reg.installing;
+    worker.addEventListener('statechange', () => {
+      if (worker.state === 'installed' && navigator.serviceWorker.controller) offer(worker);
+    });
+  });
+  const hadController = Boolean(navigator.serviceWorker.controller);
+  let reloaded = false;
+  navigator.serviceWorker.addEventListener('controllerchange', () => {
+    if (hadController && !reloaded) { reloaded = true; location.reload(); }
+  });
+  // Home Screen apps rarely restart, so check for updates whenever the app is reopened.
+  document.addEventListener('visibilitychange', () => {
+    if (document.visibilityState === 'visible' && navigator.onLine) reg.update();
+  });
+})();
+</script>
+</body>
+</html>
