@@ -11,6 +11,9 @@ It runs as an app on iPhone and iPad Home Screens and the Mac's Dock, and works 
 - Or **drag a card** onto another slot (on a phone, press and hold until it lifts). Dropping on an empty
   slot moves it; dropping on another preset swaps them. On a phone you can also lift your finger
   after the card lifts, then tap the slot where it goes. **Undo** appears for a few seconds after.
+- **Duplicate** (in a preset's edit window) copies it: tap the slot where the copy goes.
+  **Copy bank** (next to a bank's name) copies all its presets into the bank you tap, A→A, B→B….
+  Copying onto a filled slot replaces it; **Undo** is there for a few seconds.
 - Empty banks show small slot buttons (3A, 3B…). Tap one to add a preset there.
 - **Sync:** the list lives in `data.json` in the public GitHub project
   [`davyrockett/ge150-presets-data`](https://github.com/davyrockett/ge150-presets-data).

@@ -170,6 +170,11 @@ label input:focus, label textarea:focus, label select:focus { outline: 2px solid
 body.dragging { cursor: grabbing; -webkit-user-select: none; user-select: none; }
 body.picking .card:not(.picked), body.picking .chip { border-color: var(--accent); border-style: dashed; }
 .card.picked { opacity: 0.45; box-shadow: 0 0 0 2px var(--accent); }
+.bank.picked-bank .cards { opacity: 0.45; }
+.bank-head { display: flex; align-items: baseline; justify-content: space-between; gap: 12px; margin: 0 0 10px; }
+.bank-head h2 { margin: 0 !important; }
+.bank-head .link { font-size: 0.8rem; }
+@media (max-width: 560px) { .bank-head { margin-bottom: 6px; } }
 .pick-bar { position: fixed; left: 50%; top: calc(12px + env(safe-area-inset-top, 0px)); transform: translateX(-50%); z-index: 25;
   display: flex; gap: 12px; align-items: center; background: var(--accent); color: var(--surface); font-weight: 500;
   padding: 8px 8px 8px 16px; border-radius: 12px; box-shadow: 0 6px 24px rgb(0 0 0 / 0.25); max-width: calc(100% - 32px); }
@@ -238,6 +243,7 @@ body.picking .card:not(.picked), body.picking .chip { border-color: var(--accent
     <p class="f-hint" id="f-slot-hint" hidden></p>
     <div class="actions">
       <button type="button" class="btn danger" id="f-clear">Clear slot</button>
+      <button type="button" class="btn" id="f-dup">Duplicate</button>
       <span class="spacer"></span>
       <button type="button" class="btn" id="f-cancel">Cancel</button>
       <button type="submit" class="btn primary" id="f-save">Save</button>
@@ -366,7 +372,7 @@ function card(id) {
   const c = el('button', p ? 'card' : 'card empty');
   c.type = 'button';
   c.dataset.id = id;
-  if (id === picked) c.classList.add('picked');
+  if (id === picked && pickMode !== 'bank') c.classList.add('picked');
   c.addEventListener('click', () => openEdit(id));
   const head = el('div', 'card-head');
   head.append(el('span', 'id', id), el('h3', 'name', p ? p.name : 'Empty'));
@@ -386,7 +392,19 @@ function render() {
   for (let b = 1; b <= BANK_COUNT; b++) {
     const used = SLOTS.some(s => presets[b + s]);
     const sec = el('section', used ? 'bank' : 'bank bare');
-    sec.append(el('h2', null, `Bank ${b}`));
+    if (used) {
+      const head = el('div', 'bank-head');
+      head.append(el('h2', null, `Bank ${b}`));
+      if (canEdit()) {
+        const copy = el('button', 'link', 'Copy bank');
+        copy.type = 'button';
+        copy.setAttribute('aria-label', `Copy bank ${b} to another bank`);
+        copy.addEventListener('click', () => startPick(String(b), 'bank'));
+        head.append(copy);
+      }
+      sec.append(head);
+      if (pickMode === 'bank' && picked === String(b)) sec.classList.add('picked-bank');
+    } else sec.append(el('h2', null, `Bank ${b}`));
     if (used) {
       const cards = el('div', 'cards');
       for (const s of SLOTS) cards.append(card(b + s));
@@ -418,6 +436,7 @@ function openEdit(id) {
   $('f-style').value = p.style || '';
   $('f-notes').value = p.notes || '';
   $('f-clear').hidden = !p.name;
+  $('f-dup').hidden = !p.name;
   // Moving only applies to a saved preset; a new one is created in the slot you tapped.
   $('f-slot-row').hidden = !p.name;
   if (p.name) fillSlots(id);
@@ -513,6 +532,7 @@ $('f-clear').addEventListener('click', () => {
 });
 
 $('f-cancel').addEventListener('click', () => $('edit').close());
+$('f-dup').addEventListener('click', () => { $('edit').close(); startPick(editing, 'copy'); });
 
 // A short message at the bottom; pass an action ({label, run}) to add a button like Undo.
 function toast(text, action) {
@@ -537,7 +557,8 @@ function toast(text, action) {
    Dropping on an empty slot moves it; dropping on another preset swaps the two. */
 const HOLD_MS = 350;
 let drag = null;        // { id, card, kind, x0, y0, x, y, timer, ghost, dx, dy, target }
-let picked = null;      // slot id waiting for a tap on its new slot
+let picked = null;      // what's waiting for a tap: a slot id, or a bank number in 'bank' mode
+let pickMode = 'move';  // 'move' | 'copy' | 'bank'
 let renderLater = false;
 let suppressClickUntil = 0;
 let lastTouch = 0;
@@ -557,6 +578,27 @@ function movePreset(from, to) {
   }
   if (!applyChange(next)) return toast(SAVE_FAILED);
   toast(message, { label: 'Undo', run: () => { applyChange(before); toast('Undone'); } });
+}
+
+// Copy one preset into another slot (replacing what's there).
+function copyPreset(from, to) {
+  if (!to || to === from || !presets[from]) return;
+  const before = { ...presets };
+  const replaced = presets[to];
+  if (!applyChange({ ...presets, [to]: { ...presets[from] } })) return toast(SAVE_FAILED);
+  toast(replaced ? `Replaced ${to} with a copy of ${from}` : `Copied ${from} to ${to}`,
+    { label: 'Undo', run: () => { applyChange(before); toast('Undone'); } });
+}
+
+// Copy a whole bank's presets into another bank, slot for slot (A→A, B→B…).
+function copyBank(from, to) {
+  if (!to || to === from) return;
+  const before = { ...presets }, next = { ...presets };
+  let n = 0;
+  for (const s of SLOTS) if (presets[from + s]) { next[to + s] = { ...presets[from + s] }; n++; }
+  if (!n) return;
+  if (!applyChange(next)) return toast(SAVE_FAILED);
+  toast(`Copied bank ${from} to bank ${to}`, { label: 'Undo', run: () => { applyChange(before); toast('Undone'); } });
 }
 
 function startPress(card, x, y, kind) {
@@ -624,15 +666,20 @@ function endDrag(drop) {
   if (kind === 'touch') startPick(id);
 }
 
-function startPick(id) {
+function startPick(id, mode = 'move') {
   picked = id;
+  pickMode = mode;
   document.body.classList.add('picking');
-  $('pick-text').textContent = `Tap the slot for ${presets[id].name} (${id})`;
+  $('pick-text').textContent =
+    mode === 'bank' ? `Tap any slot in the bank to copy bank ${id} into`
+    : mode === 'copy' ? `Tap a slot for a copy of ${presets[id].name} (${id})`
+    : `Tap the slot for ${presets[id].name} (${id})`;
   $('pick-bar').hidden = false;
   render();
 }
 function stopPick() {
   picked = null;
+  pickMode = 'move';
   document.body.classList.remove('picking');
   $('pick-bar').hidden = true;
   render();
@@ -685,9 +732,11 @@ banksEl.addEventListener('click', e => {
   e.stopPropagation(); e.preventDefault();
   const slot = e.target.closest('[data-id]');
   if (!slot) return;
-  const from = picked;
+  const from = picked, mode = pickMode, to = slot.dataset.id;
   stopPick();
-  movePreset(from, slot.dataset.id);
+  if (mode === 'bank') copyBank(from, to.slice(0, -1));
+  else if (mode === 'copy') copyPreset(from, to);
+  else movePreset(from, to);
 }, true);
 
 function filter() {
@@ -800,7 +849,7 @@ function replaceLocal(next) {
   slots = next;
   saveLocal();
   derive();
-  if (picked && !presets[picked]) stopPick();
+  if (picked && pickMode !== 'bank' && !presets[picked]) stopPick();
   render();
 }
 
@@ -979,7 +1028,7 @@ sync.run();
 <script>
 // Offline support + updates. See sw.js.
 // The version shown in Settings. tools/bump.sh keeps this in step with VERSION in sw.js.
-window.APP_VERSION = 'v6';
+window.APP_VERSION = 'v7';
 (async () => {
   if (!('serviceWorker' in navigator)) return;
   const reg = await navigator.serviceWorker.register('sw.js');
