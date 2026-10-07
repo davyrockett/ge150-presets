@@ -122,10 +122,12 @@ form { display: grid; gap: 14px; padding: 20px; }
 .f-head .id { font-family: var(--mono); font-weight: 600; font-size: 1.3rem; color: var(--accent); }
 .f-head h2 { margin: 0; font-size: 1.1rem; font-weight: 600; }
 label { display: grid; gap: 4px; font-size: 0.85rem; color: var(--muted); }
-label input, label textarea { font: inherit; font-size: 1rem; color: var(--fg); background: var(--bg);
+label input, label textarea, label select { font: inherit; font-size: 1rem; color: var(--fg); background: var(--bg);
   border: 1px solid var(--line); border-radius: 8px; padding: 8px 10px; }
 label textarea { min-height: 110px; resize: vertical; }
-label input:focus, label textarea:focus { outline: 2px solid var(--accent); outline-offset: 0; border-color: transparent; }
+label select { font-family: var(--mono); }
+.f-hint { margin: -8px 0 0; color: var(--muted); font-size: 0.85rem; }
+label input:focus, label textarea:focus, label select:focus { outline: 2px solid var(--accent); outline-offset: 0; border-color: transparent; }
 .actions { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
 .actions .spacer { flex: 1; }
 .btn { font: inherit; font-size: 0.95rem; font-weight: 500; border-radius: 8px; padding: 8px 16px; cursor: pointer;
@@ -203,11 +205,13 @@ label input:focus, label textarea:focus { outline: 2px solid var(--accent); outl
     <label>Name <input id="f-name" autocomplete="off" required></label>
     <label>Style <input id="f-style" autocomplete="off" placeholder="e.g. Clean, Crunch, Lead"></label>
     <label>Notes <textarea id="f-notes" placeholder="Songs, settings, when to use it…"></textarea></label>
+    <label id="f-slot-row">Slot <select id="f-slot"></select></label>
+    <p class="f-hint" id="f-slot-hint" hidden></p>
     <div class="actions">
       <button type="button" class="btn danger" id="f-clear">Clear slot</button>
       <span class="spacer"></span>
       <button type="button" class="btn" id="f-cancel">Cancel</button>
-      <button type="submit" class="btn primary">Save</button>
+      <button type="submit" class="btn primary" id="f-save">Save</button>
     </div>
   </form>
 </dialog>
@@ -312,10 +316,51 @@ function openEdit(id) {
   $('f-style').value = p.style || '';
   $('f-notes').value = p.notes || '';
   $('f-clear').hidden = !p.name;
+  // Moving only applies to a saved preset; a new one is created in the slot you tapped.
+  $('f-slot-row').hidden = !p.name;
+  if (p.name) fillSlots(id);
+  updateMove();
   disarmClear();
   $('edit').showModal();
   $('f-name').focus();
 }
+
+function fillSlots(current) {
+  const sel = $('f-slot');
+  sel.innerHTML = '';
+  for (let b = 1; b <= BANK_COUNT; b++) {
+    const group = el('optgroup');
+    group.label = `Bank ${b}`;
+    for (const s of SLOTS) {
+      const id = b + s, q = presets[id];
+      const label = id === current ? `${id} · this preset` : q ? `${id} · ${q.name}` : `${id} · empty`;
+      const opt = el('option', null, label);
+      opt.value = id;
+      group.append(opt);
+    }
+    sel.append(group);
+  }
+  sel.value = current;
+}
+
+// What Save will do: save in place, move to an empty slot, or swap with a filled one.
+function updateMove() {
+  const target = $('f-slot-row').hidden ? editing : $('f-slot').value;
+  const hint = $('f-slot-hint');
+  if (target === editing) {
+    $('f-save').textContent = 'Save';
+    hint.hidden = true;
+  } else if (presets[target]) {
+    $('f-save').textContent = `Swap with ${target}`;
+    hint.textContent = `${presets[target].name} will move to ${editing}.`;
+    hint.hidden = false;
+  } else {
+    $('f-save').textContent = `Move to ${target}`;
+    hint.textContent = `${editing} will be empty.`;
+    hint.hidden = false;
+  }
+}
+$('f-slot').addEventListener('change', updateMove);
 
 function commit(message) {
   $('edit').close();
@@ -331,8 +376,19 @@ $('form').addEventListener('submit', e => {
   const style = $('f-style').value.trim(), notes = $('f-notes').value.trim();
   if (style) p.style = style;
   if (notes) p.notes = notes;
-  presets[editing] = p;
-  commit(`Saved ${editing}`);
+  const target = $('f-slot-row').hidden ? editing : $('f-slot').value;
+  if (target === editing) {
+    presets[editing] = p;
+    commit(`Saved ${editing}`);
+  } else if (presets[target]) {
+    presets[editing] = presets[target];
+    presets[target] = p;
+    commit(`Swapped ${editing} and ${target}`);
+  } else {
+    delete presets[editing];
+    presets[target] = p;
+    commit(`Moved to ${target}`);
+  }
 });
 
 // Clearing takes two taps: the first arms the button, the second clears.
@@ -446,7 +502,7 @@ render();
 <script>
 // Offline support + updates. See sw.js.
 // The version shown in Settings. tools/bump.sh keeps this in step with VERSION in sw.js.
-window.APP_VERSION = 'v3';
+window.APP_VERSION = 'v4';
 (async () => {
   if (!('serviceWorker' in navigator)) return;
   const reg = await navigator.serviceWorker.register('sw.js');

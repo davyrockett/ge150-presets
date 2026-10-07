@@ -6,7 +6,8 @@ It runs as an app on iPhone and iPad Home Screens and the Mac's Dock, and works 
 ## Using it
 
 - The gear button opens **Settings**: Auto / Light / Dark appearance, and **Check for updates**.
-- Tap a preset card to edit its name, style and notes.
+- Tap a preset card to edit its name, style and notes. Change its **Slot** to move it;
+  picking a slot that already has a preset swaps the two.
 - Empty banks show small slot buttons (3A, 3B…). Tap one to add a preset there.
 - **Presets are saved on each device**, so an iPhone and a Mac each keep their own list.
   Use **Save a backup file** at the bottom to keep a copy (e.g. in Dropbox),
