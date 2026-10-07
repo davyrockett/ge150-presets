@@ -1,6 +1,6 @@
 # GE150 Presets
 
-The presets on my Mooer GE150 Pro Li, bank by bank (1A–40D), with notes on each one.
+The presets on my Mooer GE150 Pro Li, bank by bank (1A–50D), with notes on each one.
 It runs as an app on iPhone and iPad Home Screens and the Mac's Dock, and works with no signal once installed.
 
 ## Using it

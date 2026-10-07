@@ -288,7 +288,7 @@ body.picking .card:not(.picked), body.picking .chip { border-color: var(--accent
 <div class="update" id="update-banner" role="status" hidden><span>A new version is ready.</span><button type="button" class="btn primary" id="update-btn">Update</button></div>
 
 <script>
-const BANK_COUNT = 40;
+const BANK_COUNT = 50;
 const SLOTS = ['A', 'B', 'C', 'D'];
 const DATA_REPO = 'davyrockett/ge150-presets-data';   // public: anyone can read, your key writes
 const DATA_FILE = 'data.json';
@@ -1028,7 +1028,7 @@ sync.run();
 <script>
 // Offline support + updates. See sw.js.
 // The version shown in Settings. tools/bump.sh keeps this in step with VERSION in sw.js.
-window.APP_VERSION = 'v7';
+window.APP_VERSION = 'v8';
 (async () => {
   if (!('serviceWorker' in navigator)) return;
   const reg = await navigator.serviceWorker.register('sw.js');
