@@ -168,6 +168,23 @@ label input:focus, label textarea:focus, label select:focus { outline: 2px solid
 .drop-target { border-color: var(--accent) !important; border-style: solid !important;
   background: var(--accent-soft) !important; box-shadow: 0 0 0 2px var(--accent); }
 body.dragging { cursor: grabbing; -webkit-user-select: none; user-select: none; }
+body.picking .card:not(.picked), body.picking .chip { border-color: var(--accent); border-style: dashed; }
+.card.picked { opacity: 0.45; box-shadow: 0 0 0 2px var(--accent); }
+.pick-bar { position: fixed; left: 50%; top: calc(12px + env(safe-area-inset-top, 0px)); transform: translateX(-50%); z-index: 25;
+  display: flex; gap: 12px; align-items: center; background: var(--accent); color: var(--surface); font-weight: 500;
+  padding: 8px 8px 8px 16px; border-radius: 12px; box-shadow: 0 6px 24px rgb(0 0 0 / 0.25); max-width: calc(100% - 32px); }
+.pick-bar .btn { border-color: var(--surface); color: var(--surface); padding: 4px 12px; }
+.icon-btn { position: relative; }
+.icon-btn.alert::after { content: ""; position: absolute; top: 6px; right: 6px; width: 8px; height: 8px; border-radius: 50%; background: var(--danger); }
+.sync-box { display: grid; gap: 10px; flex-basis: 100%; padding: 0; }
+.sync-box .row-btns { display: flex; gap: 8px; flex-wrap: wrap; }
+.cap.ok { color: var(--accent); }
+.cap.problem { color: var(--danger); }
+.howto { font-size: 0.85rem; color: var(--muted); }
+.howto summary { cursor: pointer; color: var(--accent); }
+.howto ol { padding-left: 20px; margin: 6px 0; }
+.howto p { margin: 6px 0; }
+.btn.armed { border-color: var(--danger); color: var(--danger); }
 .toast { display: flex; gap: 12px; align-items: center; }
 .toast.has-action { pointer-events: auto; padding-right: 8px; }
 .toast button { font: inherit; font-weight: 600; color: var(--accent-soft); background: none; border: 0; padding: 2px 8px; cursor: pointer; }
@@ -204,7 +221,7 @@ body.dragging { cursor: grabbing; -webkit-user-select: none; user-select: none; 
   <div id="banks"></div>
   <p class="none" id="none" hidden>No presets match.</p>
   <footer>
-    <span>Drag a card to move it to another slot (on a phone, press and hold first). Presets are saved on this device.</span>
+    <span>Drag a card to move it to another slot (on a phone, press and hold until it lifts). Presets sync across your devices through GitHub; anyone with the link can view them.</span>
     <button type="button" class="link" id="backup">Save a backup file</button>
     <button type="button" class="link" id="restore">Restore from backup</button>
     <input type="file" id="restore-file" accept=".json,application/json" hidden>
@@ -234,39 +251,107 @@ body.dragging { cursor: grabbing; -webkit-user-select: none; user-select: none; 
       <div class="seg" role="group" aria-label="Appearance">
         <button type="button" class="btn" data-theme-v="auto">Auto</button><button type="button" class="btn" data-theme-v="light">Light</button><button type="button" class="btn" data-theme-v="dark">Dark</button>
       </div></div>
+    <div class="set-row"><div><b>Sync and editing</b>
+        <p class="cap">Your presets are shared from GitHub, so every device shows the same list. To edit on this device, connect it once with your access key.</p></div>
+      <div class="sync-box" id="sync-on" hidden>
+        <p class="cap" id="sync-status" aria-live="polite"></p>
+        <div class="row-btns"><button type="button" class="btn" id="sync-now">Sync now</button><button type="button" class="btn" id="sync-disconnect">Turn off editing here</button></div>
+      </div>
+      <form class="sync-box" id="sync-form" autocomplete="off" hidden>
+        <label>Access key <input type="password" id="sync-token" autocomplete="off" autocapitalize="off" spellcheck="false" placeholder="github_pat_…"></label>
+        <p class="f-error" id="sync-error" role="alert" hidden></p>
+        <div class="row-btns"><button type="submit" class="btn primary" id="sync-connect">Connect</button></div>
+        <details class="howto">
+          <summary>How to get an access key</summary>
+          <p><strong>Easiest:</strong> add this app's data to the key your Z4 Log and Health Log use, then paste that same key here.</p>
+          <ol>
+            <li>On github.com, go to <strong>Settings → Developer settings → Personal access tokens → Fine-grained tokens</strong>.</li>
+            <li>Open <strong>Z4 Log sync</strong>, then <strong>Edit</strong>.</li>
+            <li>Under <strong>Repository access</strong>, add <strong>ge150-presets-data</strong>. Save.</li>
+          </ol>
+          <p><strong>Or make a separate key:</strong> Generate new token, name it “GE150 Presets sync”, choose <strong>Only select repositories → ge150-presets-data</strong>, and set <strong>Repository permissions → Contents</strong> to <strong>Read and write</strong>.</p>
+        </details>
+      </form>
+    </div>
     <div class="set-row"><div><b>App version</b><p class="cap" id="ver-line"></p></div><button type="button" class="btn" id="set-update">Check for updates</button></div>
-    <p class="cap set-note">Settings are saved on this device only.</p>
+    <p class="cap set-note">Appearance and your key are saved on this device only.</p>
   </div>
 </dialog>
 <div class="toast" id="toast" role="status"></div>
+<div class="pick-bar" id="pick-bar" role="status" hidden><span id="pick-text"></span><button type="button" class="btn" id="pick-cancel">Cancel</button></div>
 <div class="update" id="update-banner" role="status" hidden><span>A new version is ready.</span><button type="button" class="btn primary" id="update-btn">Update</button></div>
 
 <script>
 const BANK_COUNT = 40;
 const SLOTS = ['A', 'B', 'C', 'D'];
-const KEY = 'ge150.presets';
-// What a brand-new device starts with.
+const DATA_REPO = 'davyrockett/ge150-presets-data';   // public: anyone can read, your key writes
+const DATA_FILE = 'data.json';
+const K = { data: 'ge150.data', legacy: 'ge150.presets', token: 'ge150.sync-token', last: 'ge150.sync-last' };
+// What a brand-new device starts with (until it loads the synced list).
 const STARTER = {
   '2A': { name: 'Acoustic' },
   '2B': { name: 'Dry Dirt' },
   '2C': { name: 'Distortion' },
   '2D': { name: 'Lying' },
 };
+const OLD = '2001-01-01T00:00:00.000Z';   // timestamp for presets saved before syncing existed
 const $ = id => document.getElementById(id);
 const banksEl = $('banks');
 let editing = null;
 
-function load() {
-  try {
-    const v = localStorage.getItem(KEY);
-    return v == null ? { ...STARTER } : JSON.parse(v);
-  } catch { return { ...STARTER }; }
-}
-let presets = load();
-
-function store() {
-  try { localStorage.setItem(KEY, JSON.stringify(presets)); return true; }
+function lsGet(k) { try { return localStorage.getItem(k); } catch { return null; } }
+function lsSet(k, v) {
+  try { if (v == null) localStorage.removeItem(k); else localStorage.setItem(k, v); return true; }
   catch { return false; }
+}
+
+/* ---------- The preset list ----------
+   `slots` is what's stored and synced: one entry per slot, each stamped with when it last
+   changed, e.g. { '2A': { name, style, notes, updatedAt }, '2D': { deleted: true, updatedAt } }.
+   Remembering deletions (and moves away) lets other devices remove them too.
+   `presets` is the plain view the page draws: { '2A': { name, style, notes } }. */
+function loadSlots() {
+  const raw = lsGet(K.data);
+  if (raw) { try { return JSON.parse(raw).slots || {}; } catch {} }
+  // First run of this version: bring over presets saved by older versions, or the starter list.
+  let old = null;
+  try { old = JSON.parse(lsGet(K.legacy)); } catch {}
+  const slots = {};
+  for (const [id, p] of Object.entries(old || STARTER)) slots[id] = { ...p, updatedAt: OLD };
+  return slots;
+}
+let slots = loadSlots();
+let presets = {};
+function derive() {
+  presets = {};
+  for (const [id, s] of Object.entries(slots)) {
+    if (s.deleted || !s.name) continue;
+    const { updatedAt, deleted, ...p } = s;
+    presets[id] = p;
+  }
+}
+derive();
+function saveLocal() { return lsSet(K.data, JSON.stringify({ slots })); }
+
+const presetKey = p => p ? JSON.stringify([p.name, p.style || '', p.notes || '']) : 'null';
+
+// Every edit goes through here: stamp the slots that changed, save, then sync.
+function applyChange(next) {
+  const now = new Date().toISOString();
+  for (const id of new Set([...Object.keys(presets), ...Object.keys(next)])) {
+    if (presetKey(presets[id]) === presetKey(next[id])) continue;
+    slots[id] = next[id] ? { ...next[id], updatedAt: now } : { deleted: true, updatedAt: now };
+  }
+  derive();
+  render();
+  const ok = saveLocal();
+  sync.soon();
+  return ok;
+}
+
+const canEdit = () => sync.isOn();
+function needKey() {
+  toast('To edit, add your access key in Settings.', { label: 'Settings', run: openSettings });
 }
 
 function el(tag, cls, text) {
@@ -281,6 +366,7 @@ function card(id) {
   const c = el('button', p ? 'card' : 'card empty');
   c.type = 'button';
   c.dataset.id = id;
+  if (id === picked) c.classList.add('picked');
   c.addEventListener('click', () => openEdit(id));
   const head = el('div', 'card-head');
   head.append(el('span', 'id', id), el('h3', 'name', p ? p.name : 'Empty'));
@@ -293,7 +379,9 @@ function card(id) {
 }
 
 function render() {
-  $('count').textContent = `${BANK_COUNT} banks · ${Object.keys(presets).length} of ${BANK_COUNT * 4} slots saved`;
+  if (drag) { renderLater = true; return; }   // don't redraw under a card being dragged
+  $('count').textContent = `${BANK_COUNT} banks · ${Object.keys(presets).length} of ${BANK_COUNT * 4} slots saved`
+    + (canEdit() ? '' : ' · view only');
   banksEl.innerHTML = '';
   for (let b = 1; b <= BANK_COUNT; b++) {
     const used = SLOTS.some(s => presets[b + s]);
@@ -321,6 +409,7 @@ function render() {
 }
 
 function openEdit(id) {
+  if (!canEdit()) return needKey();
   editing = id;
   const p = presets[id] || {};
   $('f-id').textContent = id;
@@ -375,10 +464,11 @@ function updateMove() {
 }
 $('f-slot').addEventListener('change', updateMove);
 
-function commit(message) {
+const SAVE_FAILED = "Couldn't save on this device. Is private browsing on?";
+
+function commit(next, message) {
   $('edit').close();
-  render();
-  toast(store() ? message : "Couldn't save on this device. Is private browsing on?");
+  toast(applyChange(next) ? message : SAVE_FAILED);
 }
 
 $('form').addEventListener('submit', e => {
@@ -390,17 +480,18 @@ $('form').addEventListener('submit', e => {
   if (style) p.style = style;
   if (notes) p.notes = notes;
   const target = $('f-slot-row').hidden ? editing : $('f-slot').value;
+  const next = { ...presets };
   if (target === editing) {
-    presets[editing] = p;
-    commit(`Saved ${editing}`);
-  } else if (presets[target]) {
-    presets[editing] = presets[target];
-    presets[target] = p;
-    commit(`Swapped ${editing} and ${target}`);
+    next[editing] = p;
+    commit(next, `Saved ${editing}`);
+  } else if (next[target]) {
+    next[editing] = next[target];
+    next[target] = p;
+    commit(next, `Swapped ${editing} and ${target}`);
   } else {
-    delete presets[editing];
-    presets[target] = p;
-    commit(`Moved to ${target}`);
+    delete next[editing];
+    next[target] = p;
+    commit(next, `Moved to ${target}`);
   }
 });
 
@@ -416,8 +507,9 @@ $('f-clear').addEventListener('click', () => {
     b.textContent = `Tap again to clear ${editing}`;
     return;
   }
-  delete presets[editing];
-  commit(`Cleared ${editing}`);
+  const next = { ...presets };
+  delete next[editing];
+  commit(next, `Cleared ${editing}`);
 });
 
 $('f-cancel').addEventListener('click', () => $('edit').close());
@@ -438,28 +530,37 @@ function toast(text, action) {
   toast.timer = setTimeout(() => t.classList.remove('show', 'has-action'), action ? 5000 : 2200);
 }
 
-// ----- Drag and drop -----
-// Mouse: press and move. Touch: press and hold a moment, then move (so normal scrolling still works).
-// Drop on an empty slot to move there; drop on another preset to swap the two.
+/* ---------- Moving presets ----------
+   Mouse: press and drag.
+   Finger: press and hold until the card lifts, then drag. If you lift your finger
+   without dropping on a slot, the card stays picked up: tap the slot where it goes.
+   Dropping on an empty slot moves it; dropping on another preset swaps the two. */
 const HOLD_MS = 350;
-let drag = null;          // { id, card, pointerId, type, x0, y0, timer, ghost, dx, dy, target, x, y }
+let drag = null;        // { id, card, kind, x0, y0, x, y, timer, ghost, dx, dy, target }
+let picked = null;      // slot id waiting for a tap on its new slot
+let renderLater = false;
 let suppressClickUntil = 0;
+let lastTouch = 0;
 
 function movePreset(from, to) {
   if (!to || to === from || !presets[from]) return;
-  const before = structuredClone(presets);
+  const before = { ...presets };
+  const next = { ...presets };
   let message;
-  if (presets[to]) {
-    [presets[from], presets[to]] = [presets[to], presets[from]];
+  if (next[to]) {
+    [next[from], next[to]] = [next[to], next[from]];
     message = `Swapped ${from} and ${to}`;
   } else {
-    presets[to] = presets[from];
-    delete presets[from];
+    next[to] = next[from];
+    delete next[from];
     message = `Moved to ${to}`;
   }
-  render();
-  if (!store()) { toast("Couldn't save on this device. Is private browsing on?"); return; }
-  toast(message, { label: 'Undo', run: () => { presets = before; render(); store(); toast('Undone'); } });
+  if (!applyChange(next)) return toast(SAVE_FAILED);
+  toast(message, { label: 'Undo', run: () => { applyChange(before); toast('Undone'); } });
+}
+
+function startPress(card, x, y, kind) {
+  drag = { id: card.dataset.id, card, kind, x0: x, y0: y, x, y };
 }
 
 function slotAt(x, y) {
@@ -469,6 +570,7 @@ function slotAt(x, y) {
 }
 
 function pickUp() {
+  if (picked) stopPick();
   const r = drag.card.getBoundingClientRect();
   const g = drag.card.cloneNode(true);
   g.classList.add('drag-ghost');
@@ -509,39 +611,83 @@ function autoScroll() {
 function endDrag(drop) {
   if (!drag) return;
   clearTimeout(drag.timer);
-  const { id, ghost, target, card } = drag;
+  const { id, ghost, target, card, kind } = drag;
   drag = null;
   if (!ghost) return;            // never picked up: let the tap open the editor
-  suppressClickUntil = performance.now() + 300;
+  suppressClickUntil = performance.now() + 400;
   ghost.remove();
   card.classList.remove('lifted');
   if (target) target.classList.remove('drop-target');
   document.body.classList.remove('dragging');
-  if (drop && target) movePreset(id, target.dataset.id);
+  if (renderLater) { renderLater = false; render(); }
+  if (drop && target) return movePreset(id, target.dataset.id);
+  if (kind === 'touch') startPick(id);
 }
 
-banksEl.addEventListener('pointerdown', e => {
+function startPick(id) {
+  picked = id;
+  document.body.classList.add('picking');
+  $('pick-text').textContent = `Tap the slot for ${presets[id].name} (${id})`;
+  $('pick-bar').hidden = false;
+  render();
+}
+function stopPick() {
+  picked = null;
+  document.body.classList.remove('picking');
+  $('pick-bar').hidden = true;
+  render();
+}
+$('pick-cancel').addEventListener('click', stopPick);
+
+// Mouse
+banksEl.addEventListener('mousedown', e => {
+  if (e.button !== 0 || drag || performance.now() - lastTouch < 1000 || !canEdit()) return;
   const card = e.target.closest('.card');
-  if (!card || !presets[card.dataset.id] || e.button !== 0 || drag) return;
-  drag = { id: card.dataset.id, card, pointerId: e.pointerId, type: e.pointerType, x0: e.clientX, y0: e.clientY, x: e.clientX, y: e.clientY };
-  if (e.pointerType !== 'mouse') drag.timer = setTimeout(() => { if (drag && !drag.ghost) pickUp(); }, HOLD_MS);
+  if (card && presets[card.dataset.id]) startPress(card, e.clientX, e.clientY, 'mouse');
 });
-document.addEventListener('pointermove', e => {
-  if (!drag || e.pointerId !== drag.pointerId) return;
-  if (drag.ghost) { placeGhost(e.clientX, e.clientY); return; }
-  const moved = Math.hypot(e.clientX - drag.x0, e.clientY - drag.y0);
-  if (drag.type === 'mouse') { if (moved > 6) pickUp(); }
-  else if (moved > 10) endDrag(false);   // the finger is scrolling, not holding
+document.addEventListener('mousemove', e => {
+  if (!drag || drag.kind !== 'mouse') return;
+  if (drag.ghost) placeGhost(e.clientX, e.clientY);
+  else if (Math.hypot(e.clientX - drag.x0, e.clientY - drag.y0) > 6) pickUp();
 });
-document.addEventListener('pointerup', e => { if (drag && e.pointerId === drag.pointerId) endDrag(true); });
-document.addEventListener('pointercancel', e => { if (drag && e.pointerId === drag.pointerId) endDrag(false); });
-// While a card is picked up, stop the page from scrolling under the finger.
-document.addEventListener('touchmove', e => { if (drag && drag.ghost) e.preventDefault(); }, { passive: false });
-document.addEventListener('contextmenu', e => { if (drag) e.preventDefault(); });
-document.addEventListener('keydown', e => { if (e.key === 'Escape') endDrag(false); });
-// A drag ends with a click on the card; don't let it open the editor.
+document.addEventListener('mouseup', () => { if (drag && drag.kind === 'mouse') endDrag(true); });
+
+// Finger
+banksEl.addEventListener('touchstart', e => {
+  lastTouch = performance.now();
+  if (e.touches.length !== 1 || drag || !canEdit()) return;
+  const card = e.target.closest('.card');
+  if (!card || !presets[card.dataset.id]) return;
+  const t = e.touches[0];
+  startPress(card, t.clientX, t.clientY, 'touch');
+  drag.timer = setTimeout(() => { if (drag && !drag.ghost) pickUp(); }, HOLD_MS);
+}, { passive: true });
+document.addEventListener('touchmove', e => {
+  if (!drag || drag.kind !== 'touch') return;
+  const t = e.touches[0];
+  if (drag.ghost) { e.preventDefault(); placeGhost(t.clientX, t.clientY); return; }
+  // Moving before the card lifts means you're scrolling.
+  if (Math.hypot(t.clientX - drag.x0, t.clientY - drag.y0) > 10) { clearTimeout(drag.timer); drag = null; }
+}, { passive: false });
+document.addEventListener('touchend', () => { lastTouch = performance.now(); if (drag && drag.kind === 'touch') endDrag(true); });
+document.addEventListener('touchcancel', () => { if (drag && drag.kind === 'touch') endDrag(false); });
+
+document.addEventListener('contextmenu', e => { if (drag || picked) e.preventDefault(); });
+document.addEventListener('keydown', e => {
+  if (e.key !== 'Escape') return;
+  if (drag) endDrag(false);
+  if (picked) stopPick();
+});
+// Taps on the board: swallow the click that ends a drag, and place a picked-up card.
 banksEl.addEventListener('click', e => {
-  if (performance.now() < suppressClickUntil) { e.stopPropagation(); e.preventDefault(); }
+  if (performance.now() < suppressClickUntil) { e.stopPropagation(); e.preventDefault(); return; }
+  if (!picked) return;
+  e.stopPropagation(); e.preventDefault();
+  const slot = e.target.closest('[data-id]');
+  if (!slot) return;
+  const from = picked;
+  stopPick();
+  movePreset(from, slot.dataset.id);
 }, true);
 
 function filter() {
@@ -562,7 +708,7 @@ function filter() {
 }
 $('q').addEventListener('input', filter);
 
-// Backup: a small JSON file you can keep in Dropbox or move to another device.
+// Backup: a small JSON file you can keep in Dropbox.
 $('backup').addEventListener('click', () => {
   const blob = new Blob([JSON.stringify({ app: 'ge150-presets', presets }, null, 2)], { type: 'application/json' });
   const a = el('a');
@@ -571,7 +717,7 @@ $('backup').addEventListener('click', () => {
   a.click();
   setTimeout(() => URL.revokeObjectURL(a.href), 1000);
 });
-$('restore').addEventListener('click', () => $('restore-file').click());
+$('restore').addEventListener('click', () => { if (canEdit()) $('restore-file').click(); else needKey(); });
 $('restore-file').addEventListener('change', async e => {
   const file = e.target.files[0];
   e.target.value = '';
@@ -579,13 +725,214 @@ $('restore-file').addEventListener('change', async e => {
   try {
     const data = JSON.parse(await file.text());
     if (data.app !== 'ge150-presets' || typeof data.presets !== 'object') throw new Error();
-    presets = data.presets;
-    render();
-    toast(store() ? `Restored ${Object.keys(presets).length} presets` : "Couldn't save on this device.");
+    toast(applyChange(data.presets) ? `Restored ${Object.keys(data.presets).length} presets` : SAVE_FAILED);
   } catch {
     toast("That file isn't a GE150 presets backup.");
   }
 });
+
+/* ---------- Sync through GitHub ----------
+   The list lives in data.json in the public project davyrockett/ge150-presets-data.
+   Anyone with the app's link reads it. A device with your access key can also edit:
+   it merges its changes with the file (newest change to each slot wins) and uploads
+   the result. The key stays in this device's browser storage only. */
+class SyncError extends Error {
+  constructor(kind, message) { super(message); this.kind = kind; }   // 'auth' | 'offline' | 'conflict' | 'other'
+}
+function toBase64(text) {
+  const bytes = new TextEncoder().encode(text);
+  let bin = '';
+  for (let i = 0; i < bytes.length; i += 0x8000) bin += String.fromCharCode(...bytes.subarray(i, i + 0x8000));
+  return btoa(bin);
+}
+function fromBase64(b64) {
+  const bin = atob(b64.replace(/\s/g, ''));
+  return new TextDecoder().decode(Uint8Array.from(bin, c => c.charCodeAt(0)));
+}
+async function github(path, options = {}, token = lsGet(K.token)) {
+  let res;
+  try {
+    res = await fetch(`https://api.github.com/repos/${DATA_REPO}${path}`, {
+      ...options,
+      cache: 'no-store',
+      headers: {
+        Accept: 'application/vnd.github+json',
+        'X-GitHub-Api-Version': '2022-11-28',
+        ...(token ? { Authorization: `Bearer ${token}` } : {}),
+        ...(options.body ? { 'Content-Type': 'application/json' } : {}),
+      },
+    });
+  } catch {
+    throw new SyncError('offline', 'No connection. Changes are saved here and will sync when you’re back online.');
+  }
+  if (token && res.status === 401) throw new SyncError('auth', 'The access key isn’t working (expired or mistyped).');
+  if (token && res.status === 403) throw new SyncError('auth', 'The access key doesn’t have permission to change ge150-presets-data.');
+  if (!token && (res.status === 403 || res.status === 429)) throw new SyncError('offline', 'GitHub is busy. Will try again shortly.');
+  return res;
+}
+async function download(token) {
+  const res = await github(`/contents/${DATA_FILE}`, {}, token);
+  if (res.status === 404) return { data: null, sha: null };
+  if (!res.ok) throw new SyncError('other', `GitHub said ${res.status} when downloading.`);
+  const body = await res.json();
+  return { data: JSON.parse(fromBase64(body.content)), sha: body.sha };
+}
+async function upload(data, sha) {
+  const device = /iPhone|iPad/.test(navigator.userAgent) ? 'iPhone' : /Macintosh/.test(navigator.userAgent) ? 'Mac' : 'device';
+  const res = await github(`/contents/${DATA_FILE}`, {
+    method: 'PUT',
+    body: JSON.stringify({ message: `Sync from ${device}`, content: toBase64(JSON.stringify(data, null, 2) + '\n'), ...(sha ? { sha } : {}) }),
+  });
+  if (res.status === 409 || res.status === 422) throw new SyncError('conflict', 'Changed on another device at the same moment.');
+  if (!res.ok) throw new SyncError('other', `GitHub said ${res.status} when uploading.`);
+}
+// Newest change to each slot wins; on a tie, GitHub's copy wins.
+function mergeSlots(local, remote) {
+  const out = { ...local };
+  for (const [id, r] of Object.entries(remote)) {
+    const l = out[id];
+    if (!l || (r.updatedAt || '') >= (l.updatedAt || '')) out[id] = r;
+  }
+  return out;
+}
+const canon = s => JSON.stringify(Object.keys(s || {}).sort().map(k => [k, s[k]]));
+function replaceLocal(next) {
+  slots = next;
+  saveLocal();
+  derive();
+  if (picked && !presets[picked]) stopPick();
+  render();
+}
+
+const sync = {
+  status: 'idle',   // 'idle' | 'syncing' | 'ok' | 'view' | error kind
+  message: '',
+  isOn: () => Boolean(lsGet(K.token)),
+  set(status, message = '') { this.status = status; this.message = message; renderSync(); },
+
+  // first: right after connecting, take what's on GitHub over this device's old list.
+  async run(first = false) {
+    if (this.running) { this.again = true; return; }
+    this.running = true;
+    const on = this.isOn();
+    if (on) this.set('syncing');
+    try {
+      for (let attempt = 1; ; attempt++) {
+        const { data, sha } = await download(on ? lsGet(K.token) : null);
+        const remote = data && data.slots ? data.slots : null;
+        if (!on) { if (remote) replaceLocal(remote); break; }
+        const merged = first && remote && Object.keys(remote).length ? { ...remote } : mergeSlots(slots, remote || {});
+        if (canon(merged) !== canon(slots)) replaceLocal(merged);
+        if (remote && canon(merged) === canon(remote)) break;
+        try {
+          await upload({ app: 'ge150-presets', format: 1, slots: merged }, sha);
+          break;
+        } catch (e) {
+          if (e.kind !== 'conflict' || attempt >= 3) throw e;
+          first = false;
+        }
+      }
+      if (on) { lsSet(K.last, new Date().toISOString()); this.set('ok'); }
+      else this.set('view');
+    } catch (e) {
+      this.set(e.kind || 'other', e.message);
+    } finally {
+      this.running = false;
+      if (this.again) { this.again = false; this.run(); }
+    }
+  },
+
+  // After an edit: sync shortly, batching quick changes together.
+  soon() {
+    if (!this.isOn()) return;
+    clearTimeout(this.timer);
+    this.timer = setTimeout(() => this.run(), 1500);
+  },
+
+  async connect(token) {
+    await download(token);   // throws if the key is wrong
+    const res = await github('', {}, token);
+    const repo = res.ok ? await res.json() : null;
+    if (repo && repo.permissions && !repo.permissions.push) throw new SyncError('auth', 'That key can read but not change ge150-presets-data.');
+    lsSet(K.token, token);
+    lsSet(K.last, null);
+    render();
+    await this.run(true);
+  },
+
+  disconnect() {
+    lsSet(K.token, null);
+    lsSet(K.last, null);
+    if (picked) stopPick();
+    render();
+    this.run();
+  },
+};
+
+function timeAgo(iso) {
+  const mins = Math.floor((Date.now() - new Date(iso)) / 60000);
+  if (mins < 1) return 'just now';
+  if (mins < 60) return `${mins} min ago`;
+  if (mins < 24 * 60) return `${Math.floor(mins / 60)} h ago`;
+  const days = Math.floor(mins / (24 * 60));
+  return days === 1 ? 'yesterday' : `${days} days ago`;
+}
+
+function renderSync() {
+  const on = sync.isOn();
+  $('sync-on').hidden = !on;
+  $('sync-form').hidden = on;
+  const problem = on && ['auth', 'other', 'conflict'].includes(sync.status);
+  $('settings-open').classList.toggle('alert', problem);
+  if (!on) return;
+  const s = $('sync-status'), last = lsGet(K.last);
+  s.className = 'cap';
+  if (sync.status === 'syncing') s.textContent = 'Syncing…';
+  else if (sync.status === 'ok') { s.textContent = `✓ Up to date · synced ${timeAgo(last)}`; s.classList.add('ok'); }
+  else if (sync.status === 'offline') s.textContent = sync.message + (last ? ` Last synced ${timeAgo(last)}.` : '');
+  else if (problem) { s.textContent = sync.message; s.classList.add('problem'); }
+  else s.textContent = last ? `Last synced ${timeAgo(last)}` : 'Not synced yet';
+}
+
+$('sync-form').addEventListener('submit', async e => {
+  e.preventDefault();
+  const err = $('sync-error'), btn = $('sync-connect');
+  const token = $('sync-token').value.trim();
+  err.hidden = true;
+  if (!token) { err.textContent = 'Paste your access key.'; err.hidden = false; return; }
+  btn.disabled = true;
+  btn.textContent = 'Checking…';
+  try {
+    await sync.connect(token);
+    $('sync-token').value = '';
+    toast(sync.status === 'ok' ? 'Connected. You can edit on this device.' : sync.message);
+  } catch (ex) {
+    err.textContent = ex.message || 'Couldn’t connect.';
+    err.hidden = false;
+  } finally {
+    btn.disabled = false;
+    btn.textContent = 'Connect';
+  }
+});
+$('sync-now').addEventListener('click', () => sync.run());
+$('sync-disconnect').addEventListener('click', () => {
+  const b = $('sync-disconnect');
+  if (!b.classList.contains('armed')) {
+    b.classList.add('armed');
+    b.textContent = 'Tap again to turn off';
+    return;
+  }
+  b.classList.remove('armed');
+  b.textContent = 'Turn off editing here';
+  sync.disconnect();
+});
+
+// When to sync: on open, when you come back to the app, when the connection
+// returns, and every 2 minutes while the app is on screen.
+document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'visible') sync.run(); });
+window.addEventListener('online', () => sync.run());
+setInterval(() => { if (document.visibilityState === 'visible' && navigator.onLine) sync.run(); }, 2 * 60 * 1000);
+setInterval(() => { if (sync.status === 'ok') renderSync(); }, 30 * 1000);
 
 // Settings: appearance and app updates (saved on this device).
 function markTheme() {
@@ -597,12 +944,14 @@ document.querySelectorAll('[data-theme-v]').forEach(b => b.addEventListener('cli
   applyTheme(b.dataset.themeV);
   markTheme();
 }));
-$('settings-open').addEventListener('click', () => {
+function openSettings() {
   markTheme();
+  renderSync();
   $('ver-line').textContent = `You're on ${window.APP_VERSION}.`;
   $('set-update').disabled = false;
   $('settings').showModal();
-});
+}
+$('settings-open').addEventListener('click', openSettings);
 $('settings-close').addEventListener('click', () => $('settings').close());
 $('settings').addEventListener('click', e => { if (e.target === $('settings')) $('settings').close(); });
 $('set-update').addEventListener('click', async () => {
@@ -624,12 +973,13 @@ $('set-update').addEventListener('click', async () => {
 });
 
 render();
+sync.run();
 </script>
 
 <script>
 // Offline support + updates. See sw.js.
 // The version shown in Settings. tools/bump.sh keeps this in step with VERSION in sw.js.
-window.APP_VERSION = 'v5';
+window.APP_VERSION = 'v6';
 (async () => {
   if (!('serviceWorker' in navigator)) return;
   const reg = await navigator.serviceWorker.register('sw.js');

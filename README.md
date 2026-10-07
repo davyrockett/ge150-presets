@@ -8,12 +8,20 @@ It runs as an app on iPhone and iPad Home Screens and the Mac's Dock, and works 
 - The gear button opens **Settings**: Auto / Light / Dark appearance, and **Check for updates**.
 - Tap a preset card to edit its name, style and notes. Change its **Slot** to move it;
   picking a slot that already has a preset swaps the two.
-- Or **drag a card** onto another slot (on a phone, press and hold it first). Dropping on an empty
-  slot moves it; dropping on another preset swaps them. **Undo** appears for a few seconds after.
+- Or **drag a card** onto another slot (on a phone, press and hold until it lifts). Dropping on an empty
+  slot moves it; dropping on another preset swaps them. On a phone you can also lift your finger
+  after the card lifts, then tap the slot where it goes. **Undo** appears for a few seconds after.
 - Empty banks show small slot buttons (3A, 3B…). Tap one to add a preset there.
-- **Presets are saved on each device**, so an iPhone and a Mac each keep their own list.
-  Use **Save a backup file** at the bottom to keep a copy (e.g. in Dropbox),
-  and **Restore from backup** to load it on another device.
+- **Sync:** the list lives in `data.json` in the public GitHub project
+  [`davyrockett/ge150-presets-data`](https://github.com/davyrockett/ge150-presets-data).
+  Anyone with the app's link sees it, with no setup. To **edit** on a device, open
+  Settings → Sync and editing, paste your access key once, and tap Connect.
+  Without the key a device is view only.
+- Each device syncs when the app opens, a moment after an edit, when you come back to it,
+  and every 2 minutes while it's on screen. With no signal, edits are saved on the device
+  and sync later. If the same slot is changed on two devices, the newest change wins.
+  GitHub keeps every sync as a version, so older lists can be recovered from the project's history.
+- **Save a backup file** / **Restore from backup** at the bottom still work as an extra copy.
 
 ## What's in here
 
