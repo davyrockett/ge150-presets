@@ -160,6 +160,18 @@ label input:focus, label textarea:focus, label select:focus { outline: 2px solid
 
 .none { color: var(--muted); padding: 24px 0; }
 
+/* Drag and drop */
+.card, .chip { -webkit-user-select: none; user-select: none; -webkit-touch-callout: none; }
+.card.lifted, .chip.lifted { opacity: 0.35; }
+.drag-ghost { position: fixed; left: 0; top: 0; z-index: 30; pointer-events: none; margin: 0;
+  box-shadow: 0 12px 32px rgb(0 0 0 / 0.3); border-color: var(--accent); transform-origin: center; }
+.drop-target { border-color: var(--accent) !important; border-style: solid !important;
+  background: var(--accent-soft) !important; box-shadow: 0 0 0 2px var(--accent); }
+body.dragging { cursor: grabbing; -webkit-user-select: none; user-select: none; }
+.toast { display: flex; gap: 12px; align-items: center; }
+.toast.has-action { pointer-events: auto; padding-right: 8px; }
+.toast button { font: inherit; font-weight: 600; color: var(--accent-soft); background: none; border: 0; padding: 2px 8px; cursor: pointer; }
+
 /* Phones: compact two-column cards (slot + name only) so about three full banks fit on screen. */
 @media (max-width: 560px) {
   header { margin-bottom: 16px; }
@@ -192,7 +204,7 @@ label input:focus, label textarea:focus, label select:focus { outline: 2px solid
   <div id="banks"></div>
   <p class="none" id="none" hidden>No presets match.</p>
   <footer>
-    <span>Presets are saved on this device.</span>
+    <span>Drag a card to move it to another slot (on a phone, press and hold first). Presets are saved on this device.</span>
     <button type="button" class="link" id="backup">Save a backup file</button>
     <button type="button" class="link" id="restore">Restore from backup</button>
     <input type="file" id="restore-file" accept=".json,application/json" hidden>
@@ -296,6 +308,7 @@ function render() {
       for (const s of SLOTS) {
         const chip = el('button', 'chip', b + s);
         chip.type = 'button';
+        chip.dataset.id = b + s;
         chip.setAttribute('aria-label', `Add a preset to ${b + s}`);
         chip.addEventListener('click', () => openEdit(b + s));
         chips.append(chip);
@@ -409,13 +422,127 @@ $('f-clear').addEventListener('click', () => {
 
 $('f-cancel').addEventListener('click', () => $('edit').close());
 
-function toast(text) {
+// A short message at the bottom; pass an action ({label, run}) to add a button like Undo.
+function toast(text, action) {
   const t = $('toast');
-  t.textContent = text;
+  t.replaceChildren(el('span', null, text));
+  t.classList.toggle('has-action', !!action);
+  if (action) {
+    const b = el('button', null, action.label);
+    b.type = 'button';
+    b.addEventListener('click', () => { t.classList.remove('show', 'has-action'); action.run(); });
+    t.append(b);
+  }
   t.classList.add('show');
   clearTimeout(toast.timer);
-  toast.timer = setTimeout(() => t.classList.remove('show'), 2200);
+  toast.timer = setTimeout(() => t.classList.remove('show', 'has-action'), action ? 5000 : 2200);
 }
+
+// ----- Drag and drop -----
+// Mouse: press and move. Touch: press and hold a moment, then move (so normal scrolling still works).
+// Drop on an empty slot to move there; drop on another preset to swap the two.
+const HOLD_MS = 350;
+let drag = null;          // { id, card, pointerId, type, x0, y0, timer, ghost, dx, dy, target, x, y }
+let suppressClickUntil = 0;
+
+function movePreset(from, to) {
+  if (!to || to === from || !presets[from]) return;
+  const before = structuredClone(presets);
+  let message;
+  if (presets[to]) {
+    [presets[from], presets[to]] = [presets[to], presets[from]];
+    message = `Swapped ${from} and ${to}`;
+  } else {
+    presets[to] = presets[from];
+    delete presets[from];
+    message = `Moved to ${to}`;
+  }
+  render();
+  if (!store()) { toast("Couldn't save on this device. Is private browsing on?"); return; }
+  toast(message, { label: 'Undo', run: () => { presets = before; render(); store(); toast('Undone'); } });
+}
+
+function slotAt(x, y) {
+  const hit = document.elementFromPoint(x, y);
+  const slot = hit && hit.closest('#banks [data-id]');
+  return slot && slot !== drag.card ? slot : null;
+}
+
+function pickUp() {
+  const r = drag.card.getBoundingClientRect();
+  const g = drag.card.cloneNode(true);
+  g.classList.add('drag-ghost');
+  g.classList.remove('match');
+  g.style.width = r.width + 'px';
+  drag.dx = drag.x0 - r.left;
+  drag.dy = drag.y0 - r.top;
+  document.body.append(g);
+  drag.ghost = g;
+  drag.card.classList.add('lifted');
+  document.body.classList.add('dragging');
+  placeGhost(drag.x0, drag.y0);
+  autoScroll();
+}
+
+function placeGhost(x, y) {
+  drag.x = x; drag.y = y;
+  drag.ghost.style.transform = `translate(${x - drag.dx}px, ${y - drag.dy}px) scale(1.03)`;
+  const t = slotAt(x, y);
+  if (t !== drag.target) {
+    if (drag.target) drag.target.classList.remove('drop-target');
+    if (t) t.classList.add('drop-target');
+    drag.target = t;
+  }
+}
+
+// Scroll the page while the finger or mouse is near the top or bottom edge.
+function autoScroll() {
+  if (!drag || !drag.ghost) return;
+  const edge = 70, h = window.innerHeight;
+  let v = 0;
+  if (drag.y < edge) v = -Math.ceil((edge - drag.y) / 5);
+  else if (drag.y > h - edge) v = Math.ceil((drag.y - (h - edge)) / 5);
+  if (v) { window.scrollBy(0, v); placeGhost(drag.x, drag.y); }
+  requestAnimationFrame(autoScroll);
+}
+
+function endDrag(drop) {
+  if (!drag) return;
+  clearTimeout(drag.timer);
+  const { id, ghost, target, card } = drag;
+  drag = null;
+  if (!ghost) return;            // never picked up: let the tap open the editor
+  suppressClickUntil = performance.now() + 300;
+  ghost.remove();
+  card.classList.remove('lifted');
+  if (target) target.classList.remove('drop-target');
+  document.body.classList.remove('dragging');
+  if (drop && target) movePreset(id, target.dataset.id);
+}
+
+banksEl.addEventListener('pointerdown', e => {
+  const card = e.target.closest('.card');
+  if (!card || !presets[card.dataset.id] || e.button !== 0 || drag) return;
+  drag = { id: card.dataset.id, card, pointerId: e.pointerId, type: e.pointerType, x0: e.clientX, y0: e.clientY, x: e.clientX, y: e.clientY };
+  if (e.pointerType !== 'mouse') drag.timer = setTimeout(() => { if (drag && !drag.ghost) pickUp(); }, HOLD_MS);
+});
+document.addEventListener('pointermove', e => {
+  if (!drag || e.pointerId !== drag.pointerId) return;
+  if (drag.ghost) { placeGhost(e.clientX, e.clientY); return; }
+  const moved = Math.hypot(e.clientX - drag.x0, e.clientY - drag.y0);
+  if (drag.type === 'mouse') { if (moved > 6) pickUp(); }
+  else if (moved > 10) endDrag(false);   // the finger is scrolling, not holding
+});
+document.addEventListener('pointerup', e => { if (drag && e.pointerId === drag.pointerId) endDrag(true); });
+document.addEventListener('pointercancel', e => { if (drag && e.pointerId === drag.pointerId) endDrag(false); });
+// While a card is picked up, stop the page from scrolling under the finger.
+document.addEventListener('touchmove', e => { if (drag && drag.ghost) e.preventDefault(); }, { passive: false });
+document.addEventListener('contextmenu', e => { if (drag) e.preventDefault(); });
+document.addEventListener('keydown', e => { if (e.key === 'Escape') endDrag(false); });
+// A drag ends with a click on the card; don't let it open the editor.
+banksEl.addEventListener('click', e => {
+  if (performance.now() < suppressClickUntil) { e.stopPropagation(); e.preventDefault(); }
+}, true);
 
 function filter() {
   const q = $('q').value.trim().toLowerCase();
@@ -502,7 +629,7 @@ render();
 <script>
 // Offline support + updates. See sw.js.
 // The version shown in Settings. tools/bump.sh keeps this in step with VERSION in sw.js.
-window.APP_VERSION = 'v4';
+window.APP_VERSION = 'v5';
 (async () => {
   if (!('serviceWorker' in navigator)) return;
   const reg = await navigator.serviceWorker.register('sw.js');
