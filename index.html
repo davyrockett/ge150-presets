@@ -13,6 +13,22 @@
 <meta name="apple-mobile-web-app-status-bar-style" content="default">
 <meta name="theme-color" content="#f2f1ee" media="(prefers-color-scheme: light)">
 <meta name="theme-color" content="#141413" media="(prefers-color-scheme: dark)">
+<script>
+const THEME_BG = { light: '#f2f1ee', dark: '#141413' };
+function applyTheme(t) {
+  const r = document.documentElement;
+  const metas = document.querySelectorAll('meta[name="theme-color"]');
+  if (t === 'light' || t === 'dark') {
+    r.setAttribute('data-theme', t);
+    metas.forEach(m => m.setAttribute('content', THEME_BG[t]));
+  } else {
+    r.removeAttribute('data-theme');
+    metas.forEach(m => m.setAttribute('content', m.media.includes('dark') ? THEME_BG.dark : THEME_BG.light));
+  }
+}
+function savedTheme() { try { return localStorage.getItem('ge150.theme') || 'auto'; } catch { return 'auto'; } }
+applyTheme(savedTheme());
+</script>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@500;600&display=swap">
 <style>
@@ -32,12 +48,18 @@
   --mono: "IBM Plex Mono", ui-monospace, Menlo, monospace;
 }
 @media (prefers-color-scheme: dark) {
-  :root {
+  :root:not([data-theme="light"]) {
     --bg: #141413; --surface: #1d1d1b; --fg: #ecebe6; --muted: #9c9a93; --line: #34332f;
     --accent: #fb923c; --accent-soft: #3a2416; --empty: #5c5a55; --danger: #f08a80;
     color-scheme: dark;
   }
 }
+:root[data-theme="dark"] {
+  --bg: #141413; --surface: #1d1d1b; --fg: #ecebe6; --muted: #9c9a93; --line: #34332f;
+  --accent: #fb923c; --accent-soft: #3a2416; --empty: #5c5a55; --danger: #f08a80;
+  color-scheme: dark;
+}
+:root[data-theme="light"] { color-scheme: light; }
 * { box-sizing: border-box; }
 [hidden] { display: none !important; }
 body { margin: 0; background: var(--bg); color: var(--fg); font-family: var(--body); font-size: 16px; line-height: 1.5;
@@ -52,6 +74,11 @@ input[type=search] {
   font: inherit; font-size: 1rem; width: 240px; max-width: 100%; padding: 8px 12px;
   border: 1px solid var(--line); border-radius: 8px; background: var(--surface); color: var(--fg);
 }
+.tools { display: flex; gap: 8px; align-items: center; flex: 1 1 auto; justify-content: flex-end; min-width: 0; }
+.icon-btn { flex: none; display: inline-flex; align-items: center; justify-content: center; width: 40px; height: 40px; padding: 0;
+  border: 1px solid var(--line); border-radius: 8px; background: var(--surface); color: var(--muted); cursor: pointer; }
+.icon-btn:hover { color: var(--accent); border-color: var(--accent); }
+.icon-btn:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
 input[type=search]:focus { outline: 2px solid var(--accent); outline-offset: 1px; border-color: transparent; }
 
 .bank { margin-bottom: 32px; }
@@ -107,6 +134,20 @@ label input:focus, label textarea:focus { outline: 2px solid var(--accent); outl
 .btn.danger { color: var(--danger); border-color: transparent; padding-left: 4px; padding-right: 4px; }
 .btn.danger.armed { border-color: var(--danger); padding-left: 12px; padding-right: 12px; }
 
+.settings { display: grid; padding: 20px; }
+.settings-head { display: flex; align-items: center; justify-content: space-between; margin-bottom: 8px; }
+.settings-head h2 { margin: 0; font-size: 1.2rem; font-weight: 600; }
+.set-row { display: flex; justify-content: space-between; align-items: center; gap: 12px 16px; flex-wrap: wrap; padding: 14px 0; }
+.set-row + .set-row { border-top: 1px solid var(--line); }
+.set-row > div:first-child { flex: 1 1 200px; min-width: 0; }
+.set-row b { font-weight: 600; }
+.cap { margin: 2px 0 0; color: var(--muted); font-size: 0.85rem; }
+.seg { display: flex; border: 1px solid var(--line); border-radius: 8px; overflow: hidden; }
+.seg .btn { border: 0; border-radius: 0; padding: 7px 14px; }
+.seg .btn + .btn { border-left: 1px solid var(--line); }
+.seg .btn[aria-pressed="true"] { background: var(--accent); color: var(--surface); }
+.btn:disabled { opacity: 0.6; cursor: default; }
+.set-note { margin-top: 6px; }
 .toast, .update { position: fixed; left: 50%; bottom: calc(24px + env(safe-area-inset-bottom, 0px)); transform: translateX(-50%);
   background: var(--fg); color: var(--bg); font-size: 0.9rem; z-index: 20; }
 .toast { padding: 8px 16px; border-radius: 99px; opacity: 0; transition: opacity .2s; pointer-events: none; }
@@ -120,7 +161,8 @@ label input:focus, label textarea:focus { outline: 2px solid var(--accent); outl
 /* Phones: compact two-column cards (slot + name only) so about three full banks fit on screen. */
 @media (max-width: 560px) {
   header { margin-bottom: 16px; }
-  input[type=search] { width: 100%; }
+  input[type=search] { width: auto; flex: 1 1 auto; }
+  .tools { flex-basis: 100%; }
   .bank { margin-bottom: 16px; }
   .bank h2 { margin-bottom: 6px; }
   .bank.bare + .bank:not(.bare) { margin-top: 12px; }
@@ -140,7 +182,10 @@ label input:focus, label textarea:focus { outline: 2px solid var(--accent); outl
       <h1>GE150 Pro Li Presets</h1>
       <p id="count"></p>
     </div>
-    <input type="search" id="q" placeholder="Search name, style, notes" aria-label="Search presets">
+    <div class="tools">
+      <input type="search" id="q" placeholder="Search name, style, notes" aria-label="Search presets">
+      <button type="button" class="icon-btn" id="settings-open" aria-label="Settings" title="Settings"><svg viewBox="0 0 24 24" width="20" height="20" aria-hidden="true"><path fill="currentColor" d="M19.4 13a7.6 7.6 0 0 0 0-2l2.1-1.6-2-3.5-2.5 1a7.5 7.5 0 0 0-1.7-1L15 3.3h-4l-.4 2.6a7.5 7.5 0 0 0-1.7 1l-2.5-1-2 3.5L6.6 11a7.6 7.6 0 0 0 0 2l-2.1 1.6 2 3.5 2.5-1a7.5 7.5 0 0 0 1.7 1l.4 2.6h4l.4-2.6a7.5 7.5 0 0 0 1.7-1l2.5 1 2-3.5zM13 15.5a3.5 3.5 0 1 1 0-7 3.5 3.5 0 0 1 0 7z" transform="translate(-1 0)"/></svg></button>
+    </div>
   </header>
   <div id="banks"></div>
   <p class="none" id="none" hidden>No presets match.</p>
@@ -165,6 +210,17 @@ label input:focus, label textarea:focus { outline: 2px solid var(--accent); outl
       <button type="submit" class="btn primary">Save</button>
     </div>
   </form>
+</dialog>
+<dialog id="settings" aria-labelledby="settings-title">
+  <div class="settings">
+    <div class="settings-head"><h2 id="settings-title">Settings</h2><button type="button" class="btn" id="settings-close">Done</button></div>
+    <div class="set-row"><div><b>Appearance</b><p class="cap">Auto follows your device's light or dark setting.</p></div>
+      <div class="seg" role="group" aria-label="Appearance">
+        <button type="button" class="btn" data-theme-v="auto">Auto</button><button type="button" class="btn" data-theme-v="light">Light</button><button type="button" class="btn" data-theme-v="dark">Dark</button>
+      </div></div>
+    <div class="set-row"><div><b>App version</b><p class="cap" id="ver-line"></p></div><button type="button" class="btn" id="set-update">Check for updates</button></div>
+    <p class="cap set-note">Settings are saved on this device only.</p>
+  </div>
 </dialog>
 <div class="toast" id="toast" role="status"></div>
 <div class="update" id="update-banner" role="status" hidden><span>A new version is ready.</span><button type="button" class="btn primary" id="update-btn">Update</button></div>
@@ -348,35 +404,83 @@ $('restore-file').addEventListener('change', async e => {
   }
 });
 
+// Settings: appearance and app updates (saved on this device).
+function markTheme() {
+  const cur = savedTheme();
+  document.querySelectorAll('[data-theme-v]').forEach(b => b.setAttribute('aria-pressed', b.dataset.themeV === cur));
+}
+document.querySelectorAll('[data-theme-v]').forEach(b => b.addEventListener('click', () => {
+  try { localStorage.setItem('ge150.theme', b.dataset.themeV); } catch {}
+  applyTheme(b.dataset.themeV);
+  markTheme();
+}));
+$('settings-open').addEventListener('click', () => {
+  markTheme();
+  $('ver-line').textContent = `You're on ${window.APP_VERSION}.`;
+  $('set-update').disabled = false;
+  $('settings').showModal();
+});
+$('settings-close').addEventListener('click', () => $('settings').close());
+$('settings').addEventListener('click', e => { if (e.target === $('settings')) $('settings').close(); });
+$('set-update').addEventListener('click', async () => {
+  const ver = $('ver-line'), ub = $('set-update'), reg = window.SW_REG;
+  if (!reg || !navigator.onLine) { ver.textContent = 'Connect to the internet, then try again.'; return; }
+  ub.disabled = true;
+  ver.textContent = 'Checking…';
+  try { await reg.update(); } catch {}
+  const w = reg.waiting || reg.installing;
+  if (w) {
+    ver.textContent = 'Updating now…';
+    const go = () => w.postMessage('skipWaiting');
+    if (w.state === 'installed') go();
+    else w.addEventListener('statechange', () => { if (w.state === 'installed') go(); });
+  } else {
+    ver.textContent = `You're on the latest version (${window.APP_VERSION}).`;
+    ub.disabled = false;
+  }
+});
+
 render();
 </script>
 
 <script>
-// Offline support + update banner. See sw.js.
+// Offline support + updates. See sw.js.
+// The version shown in Settings. tools/bump.sh keeps this in step with VERSION in sw.js.
+window.APP_VERSION = 'v3';
 (async () => {
   if (!('serviceWorker' in navigator)) return;
   const reg = await navigator.serviceWorker.register('sw.js');
+  window.SW_REG = reg;
   const banner = document.getElementById('update-banner');
-  const offer = (worker) => {
-    banner.hidden = false;
-    document.getElementById('update-btn').onclick = () => worker.postMessage('skipWaiting');
-  };
-  if (reg.waiting && navigator.serviceWorker.controller) offer(reg.waiting);
-  reg.addEventListener('updatefound', () => {
-    const worker = reg.installing;
-    worker.addEventListener('statechange', () => {
-      if (worker.state === 'installed' && navigator.serviceWorker.controller) offer(worker);
-    });
-  });
   const hadController = Boolean(navigator.serviceWorker.controller);
+  const apply = (worker) => worker.postMessage('skipWaiting');
+  // Right after the app opens there's nothing to lose, so updates apply on their own.
+  // Later on, offer a banner instead of reloading while you're editing.
+  const justOpened = () => performance.now() < 20000;
+  const handle = (worker) => {
+    if (!worker || !navigator.serviceWorker.controller) return;
+    if (justOpened()) apply(worker);
+    else {
+      banner.hidden = false;
+      document.getElementById('update-btn').onclick = () => apply(worker);
+    }
+  };
+  const watch = (worker) => {
+    if (!worker) return;
+    if (worker.state === 'installed') return handle(worker);
+    worker.addEventListener('statechange', () => { if (worker.state === 'installed') handle(worker); });
+  };
+  handle(reg.waiting);
+  watch(reg.installing);
+  reg.addEventListener('updatefound', () => watch(reg.installing));
   let reloaded = false;
   navigator.serviceWorker.addEventListener('controllerchange', () => {
     if (hadController && !reloaded) { reloaded = true; location.reload(); }
   });
-  // Home Screen apps rarely restart, so check for updates whenever the app is reopened.
-  document.addEventListener('visibilitychange', () => {
-    if (document.visibilityState === 'visible' && navigator.onLine) reg.update();
-  });
+  // Check now, and again whenever the Home Screen app comes back to the front.
+  const check = () => { if (navigator.onLine) reg.update().catch(() => {}).then(() => handle(reg.waiting)); };
+  check();
+  document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'visible') check(); });
 })();
 </script>
 </body>

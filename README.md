@@ -5,6 +5,7 @@ It runs as an app on iPhone and iPad Home Screens and the Mac's Dock, and works 
 
 ## Using it
 
+- The gear button opens **Settings**: Auto / Light / Dark appearance, and **Check for updates**.
 - Tap a preset card to edit its name, style and notes.
 - Empty banks show small slot buttons (3A, 3B…). Tap one to add a preset there.
 - **Presets are saved on each device**, so an iPhone and a Mac each keep their own list.
@@ -29,7 +30,7 @@ It runs as an app on iPhone and iPad Home Screens and the Mac's Dock, and works 
 ## Publishing a change
 
 1. Edit the files.
-2. **In `sw.js`, bump `VERSION`** (v1 → v2 …). Without this, devices keep the old copy.
+2. **Run `tools/bump.sh`** to bump the version (v3 → v4 …) in `sw.js` and `index.html`. Without this, devices keep the old copy.
 3. Commit and push (`git add -A && git commit -m "…" && git push`).
-4. GitHub Pages updates within a minute or two. Open the app and an
-   **Update** banner appears. Tap it.
+4. GitHub Pages updates within a minute or two. Reopen the app and it updates itself,
+   or use **Settings → Check for updates**.
