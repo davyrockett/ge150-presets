@@ -6,7 +6,11 @@ It runs as an app on iPhone and iPad Home Screens and the Mac's Dock, and works 
 ## Using it
 
 - The gear button opens **Settings**: Auto / Light / Dark appearance, and **Check for updates**.
-- Tap a preset card to edit its name, style and notes. Change its **Slot** to move it;
+- Tap a preset card to edit its name, style, notes and **modules in use**. The nine modules
+  are the GE150's effect blocks in chain order: FX (wah/comp), DS (drive), AMP, CAB (cab/IR),
+  NS (noise gate), EQ, MOD (modulation), DLY (delay), REV (reverb). Cards show them as a row
+  of lights, and search finds them (e.g. "delay").
+- In the edit window, change a preset's **Slot** to move it;
   picking a slot that already has a preset swaps the two.
 - Or **drag a card** onto another slot (on a phone, press and hold until it lifts). Dropping on an empty
   slot moves it; dropping on another preset swaps them. On a phone you can also lift your finger

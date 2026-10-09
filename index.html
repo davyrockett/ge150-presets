@@ -127,6 +127,20 @@ label input, label textarea, label select { font: inherit; font-size: 1rem; colo
 label textarea { min-height: 110px; resize: vertical; }
 label select { font-family: var(--mono); }
 .f-hint { margin: -8px 0 0; color: var(--muted); font-size: 0.85rem; }
+/* Modules: the GE150's nine effect blocks, in signal-chain order */
+.mods { border: 0; margin: 0; padding: 0; display: grid; gap: 6px; min-width: 0; }
+.mods legend { padding: 0; margin-bottom: 4px; font-size: 0.85rem; color: var(--muted); }
+.mod-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px; }
+.mod-btn { font: inherit; display: flex; align-items: center; gap: 8px; text-align: left; cursor: pointer; min-width: 0;
+  padding: 6px 8px; border: 1px solid var(--line); border-radius: 8px; background: var(--bg); color: var(--muted); }
+.mod-btn svg { flex: none; width: 22px; height: 22px; }
+.mod-btn b { display: block; font-family: var(--mono); font-size: 0.8rem; font-weight: 600; color: var(--fg); }
+.mod-btn small { display: block; font-size: 0.72rem; line-height: 1.2; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.mod-btn[aria-pressed="true"] { border-color: var(--accent); background: var(--accent-soft); color: var(--accent); }
+.mod-btn:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+.mods-row { display: flex; gap: 4px; margin-top: 8px; }
+.mods-row svg { width: 16px; height: 16px; color: var(--line); }
+.mods-row svg.on { color: var(--accent); }
 label input:focus, label textarea:focus, label select:focus { outline: 2px solid var(--accent); outline-offset: 0; border-color: transparent; }
 .actions { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
 .actions .spacer { flex: 1; }
@@ -208,6 +222,10 @@ body.picking .card:not(.picked), body.picking .chip { border-color: var(--accent
   .card .id { font-size: 0.8rem; }
   .card .name, .card.empty .name { font-size: 0.95rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; overflow-wrap: normal; min-width: 0; }
   .card .style, .card .notes { display: none; }
+  .mods-row { gap: 2px; margin-top: 4px; }
+  .mods-row svg { width: 14px; height: 14px; }
+  .mod-btn { padding: 6px; gap: 6px; }
+  .mod-btn small { display: none; }
 }
 </style>
 </head>
@@ -219,7 +237,7 @@ body.picking .card:not(.picked), body.picking .chip { border-color: var(--accent
       <p id="count"></p>
     </div>
     <div class="tools">
-      <input type="search" id="q" placeholder="Search name, style, notes" aria-label="Search presets">
+      <input type="search" id="q" placeholder="Search names, notes, modules" aria-label="Search presets">
       <button type="button" class="icon-btn" id="settings-open" aria-label="Settings" title="Settings"><svg viewBox="0 0 24 24" width="20" height="20" aria-hidden="true"><path fill="currentColor" d="M19.4 13a7.6 7.6 0 0 0 0-2l2.1-1.6-2-3.5-2.5 1a7.5 7.5 0 0 0-1.7-1L15 3.3h-4l-.4 2.6a7.5 7.5 0 0 0-1.7 1l-2.5-1-2 3.5L6.6 11a7.6 7.6 0 0 0 0 2l-2.1 1.6 2 3.5 2.5-1a7.5 7.5 0 0 0 1.7 1l.4 2.6h4l.4-2.6a7.5 7.5 0 0 0 1.7-1l2.5 1 2-3.5zM13 15.5a3.5 3.5 0 1 1 0-7 3.5 3.5 0 0 1 0 7z" transform="translate(-1 0)"/></svg></button>
     </div>
   </header>
@@ -238,6 +256,7 @@ body.picking .card:not(.picked), body.picking .chip { border-color: var(--accent
     <div class="f-head"><span class="id" id="f-id"></span><h2 id="f-title"></h2></div>
     <label>Name <input id="f-name" autocomplete="off" required></label>
     <label>Style <input id="f-style" autocomplete="off" placeholder="e.g. Clean, Crunch, Lead"></label>
+    <fieldset class="mods"><legend>Modules in use</legend><div class="mod-grid" id="f-mods"></div></fieldset>
     <label>Notes <textarea id="f-notes" placeholder="Songs, settings, when to use it…"></textarea></label>
     <label id="f-slot-row">Slot <select id="f-slot"></select></label>
     <p class="f-hint" id="f-slot-hint" hidden></p>
@@ -300,7 +319,22 @@ const STARTER = {
   '2C': { name: 'Distortion' },
   '2D': { name: 'Lying' },
 };
-const OLD = '2001-01-01T00:00:00.000Z';   // timestamp for presets saved before syncing existed
+const OLD = '2001-01-01T00:00:00.000Z';
+// The GE150 Pro Li's nine effect modules, in signal-chain order (the row of lights under the screen).
+const MODULES = [
+  { key: 'fx',  label: 'FX',  name: 'Wah / Comp', icon: '<rect x="3" y="16" width="18" height="4" rx="1"/><path d="M5 16 18 8l2 2-11 6"/>' },
+  { key: 'ds',  label: 'DS',  name: 'Drive',      icon: '<path d="M2 12h2l1.5-5h4l1.5 10h4l1.5-5H22"/>' },
+  { key: 'amp', label: 'AMP', name: 'Amp',        icon: '<rect x="3" y="6" width="18" height="12" rx="2"/><circle cx="8" cy="12" r="1.5"/><circle cx="12" cy="12" r="1.5"/><circle cx="16" cy="12" r="1.5"/>' },
+  { key: 'cab', label: 'CAB', name: 'Cab / IR',   icon: '<rect x="4" y="3" width="16" height="18" rx="2"/><circle cx="12" cy="12" r="5"/><circle cx="12" cy="12" r="1.5"/>' },
+  { key: 'ns',  label: 'NS',  name: 'Noise gate', icon: '<path d="M2 12c1.5-6 3-6 4.5 0s3 6 4.5 0"/><path d="M14 6v12"/><path d="M14 12h8"/>' },
+  { key: 'eq',  label: 'EQ',  name: 'EQ',         icon: '<path d="M6 4v16M12 4v16M18 4v16"/><path d="M4 15h4M10 8h4M16 13h4"/>' },
+  { key: 'mod', label: 'MOD', name: 'Modulation', icon: '<path d="M2 12c2-6 4-6 6 0s4 6 6 0 4-6 6 0"/>' },
+  { key: 'dly', label: 'DLY', name: 'Delay',      icon: '<path d="M4 5v14"/><path d="M9.5 7.5v9" opacity=".75"/><path d="M14.5 9.5v5" opacity=".5"/><path d="M19 11v2" opacity=".3"/>' },
+  { key: 'rev', label: 'REV', name: 'Reverb',     icon: '<circle cx="5" cy="12" r="1.5"/><path d="M9 8.5a5 5 0 0 1 0 7M13 5.5a9 9 0 0 1 0 13M17 3a12.5 12.5 0 0 1 0 18"/>' },
+];
+const modSvg = (m, cls = '') =>
+  `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" class="${cls}" aria-hidden="true">${m.icon}</svg>`;
+const orderMods = list => MODULES.map(m => m.key).filter(k => (list || []).includes(k));   // timestamp for presets saved before syncing existed
 const $ = id => document.getElementById(id);
 const banksEl = $('banks');
 let editing = null;
@@ -339,7 +373,7 @@ function derive() {
 derive();
 function saveLocal() { return lsSet(K.data, JSON.stringify({ slots })); }
 
-const presetKey = p => p ? JSON.stringify([p.name, p.style || '', p.notes || '']) : 'null';
+const presetKey = p => p ? JSON.stringify([p.name, p.style || '', p.notes || '', orderMods(p.modules).join(',')]) : 'null';
 
 // Every edit goes through here: stamp the slots that changed, save, then sync.
 function applyChange(next) {
@@ -379,6 +413,12 @@ function card(id) {
   c.append(head);
   if (p) {
     if (p.style) c.append(el('span', 'style', p.style));
+    if (p.modules && p.modules.length) {
+      const row = el('div', 'mods-row');
+      row.setAttribute('aria-label', 'Modules: ' + MODULES.filter(m => p.modules.includes(m.key)).map(m => m.name).join(', '));
+      row.innerHTML = MODULES.map(m => modSvg(m, p.modules.includes(m.key) ? 'on' : '')).join('');
+      c.append(row);
+    }
     c.append(el('p', p.notes ? 'notes' : 'notes blank', p.notes || 'No notes yet'));
   }
   return c;
@@ -434,6 +474,7 @@ function openEdit(id) {
   $('f-title').textContent = p.name ? 'Edit preset' : 'New preset';
   $('f-name').value = p.name || '';
   $('f-style').value = p.style || '';
+  for (const b of $('f-mods').children) b.setAttribute('aria-pressed', (p.modules || []).includes(b.dataset.mod));
   $('f-notes').value = p.notes || '';
   $('f-clear').hidden = !p.name;
   $('f-dup').hidden = !p.name;
@@ -483,6 +524,16 @@ function updateMove() {
 }
 $('f-slot').addEventListener('change', updateMove);
 
+for (const m of MODULES) {
+  const b = el('button', 'mod-btn');
+  b.type = 'button';
+  b.dataset.mod = m.key;
+  b.title = m.name;
+  b.innerHTML = `${modSvg(m)}<span><b>${m.label}</b><small>${m.name}</small></span>`;
+  b.addEventListener('click', () => b.setAttribute('aria-pressed', b.getAttribute('aria-pressed') !== 'true'));
+  $('f-mods').append(b);
+}
+
 const SAVE_FAILED = "Couldn't save on this device. Is private browsing on?";
 
 function commit(next, message) {
@@ -498,6 +549,8 @@ $('form').addEventListener('submit', e => {
   const style = $('f-style').value.trim(), notes = $('f-notes').value.trim();
   if (style) p.style = style;
   if (notes) p.notes = notes;
+  const mods = [...$('f-mods').children].filter(b => b.getAttribute('aria-pressed') === 'true').map(b => b.dataset.mod);
+  if (mods.length) p.modules = mods;
   const target = $('f-slot-row').hidden ? editing : $('f-slot').value;
   const next = { ...presets };
   if (target === editing) {
@@ -746,7 +799,7 @@ function filter() {
     let hit = false;
     for (const c of sec.querySelectorAll('.card')) {
       const p = presets[c.dataset.id];
-      const m = !!q && !!p && [c.dataset.id, p.name, p.style, p.notes].join(' ').toLowerCase().includes(q);
+      const m = !!q && !!p && [c.dataset.id, p.name, p.style, p.notes, ...MODULES.filter(m => (p.modules || []).includes(m.key)).flatMap(m => [m.label, m.name])].join(' ').toLowerCase().includes(q);
       c.classList.toggle('match', m);
       hit = hit || m;
     }
@@ -1028,7 +1081,7 @@ sync.run();
 <script>
 // Offline support + updates. See sw.js.
 // The version shown in Settings. tools/bump.sh keeps this in step with VERSION in sw.js.
-window.APP_VERSION = 'v8';
+window.APP_VERSION = 'v9';
 (async () => {
   if (!('serviceWorker' in navigator)) return;
   const reg = await navigator.serviceWorker.register('sw.js');
