@@ -38,12 +38,10 @@ applyTheme(savedTheme());
   --bg: #f2f1ee;
   --surface: #ffffff;
   --fg: #1d1d1b;
-  --muted: #676767;
+  --muted: #6b6a65;
   --line: #dcdad4;
-  --accent: #F57C14;
-  --accent-ink: #9A4204;
-  --on-accent: #1E1B18;
-  --accent-soft: #FDE3CC;
+  --accent: #c2410c;
+  --accent-soft: #fbe6d9;
   --empty: #a9a7a0;
   --danger: #b42318;
   --body: "IBM Plex Sans", system-ui, -apple-system, sans-serif;
@@ -51,14 +49,14 @@ applyTheme(savedTheme());
 }
 @media (prefers-color-scheme: dark) {
   :root:not([data-theme="light"]) {
-    --bg: #141413; --surface: #1d1d1b; --fg: #ecebe6; --muted: #A3A3A3; --line: #34332f;
-    --accent: #FF9433; --accent-ink: #FFBD85; --accent-soft: #422712; --empty: #5c5a55; --danger: #f08a80;
+    --bg: #141413; --surface: #1d1d1b; --fg: #ecebe6; --muted: #9c9a93; --line: #34332f;
+    --accent: #fb923c; --accent-soft: #3a2416; --empty: #5c5a55; --danger: #f08a80;
     color-scheme: dark;
   }
 }
 :root[data-theme="dark"] {
-  --bg: #141413; --surface: #1d1d1b; --fg: #ecebe6; --muted: #A3A3A3; --line: #34332f;
-  --accent: #FF9433; --accent-ink: #FFBD85; --accent-soft: #422712; --empty: #5c5a55; --danger: #f08a80;
+  --bg: #141413; --surface: #1d1d1b; --fg: #ecebe6; --muted: #9c9a93; --line: #34332f;
+  --accent: #fb923c; --accent-soft: #3a2416; --empty: #5c5a55; --danger: #f08a80;
   color-scheme: dark;
 }
 :root[data-theme="light"] { color-scheme: light; }
@@ -79,7 +77,7 @@ input[type=search] {
 .tools { display: flex; gap: 8px; align-items: center; flex: 1 1 auto; justify-content: flex-end; min-width: 0; }
 .icon-btn { flex: none; display: inline-flex; align-items: center; justify-content: center; width: 40px; height: 40px; padding: 0;
   border: 1px solid var(--line); border-radius: 8px; background: var(--surface); color: var(--muted); cursor: pointer; }
-.icon-btn:hover { color: var(--accent-ink); border-color: var(--accent); }
+.icon-btn:hover { color: var(--accent); border-color: var(--accent); }
 .icon-btn:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
 input[type=search]:focus { outline: 2px solid var(--accent); outline-offset: 1px; border-color: transparent; }
 
@@ -92,10 +90,10 @@ input[type=search]:focus { outline: 2px solid var(--accent); outline-offset: 1px
   min-width: 0; font: inherit; color: inherit; text-align: left; width: 100%; cursor: pointer; }
 .card:hover { border-color: var(--accent); }
 .card-head { display: flex; align-items: baseline; gap: 10px; }
-.card .id { font-family: var(--mono); font-weight: 600; color: var(--accent-ink); font-size: 0.95rem; }
+.card .id { font-family: var(--mono); font-weight: 600; color: var(--accent); font-size: 0.95rem; }
 .card .name { font-size: 1.2rem; font-weight: 600; margin: 0; overflow-wrap: anywhere; }
 .card .style { display: inline-block; margin-top: 6px; font-size: 0.78rem; font-weight: 500;
-  color: var(--accent-ink); background: var(--accent-soft); padding: 1px 8px; border-radius: 99px; }
+  color: var(--accent); background: var(--accent-soft); padding: 1px 8px; border-radius: 99px; }
 .card .notes { margin: 10px 0 0; white-space: pre-wrap; overflow-wrap: anywhere; }
 .card .notes.blank { color: var(--empty); font-size: 0.9rem; }
 .card.empty { background: transparent; border-style: dashed; padding: 12px 18px; }
@@ -110,18 +108,18 @@ input[type=search]:focus { outline: 2px solid var(--accent); outline-offset: 1px
 .chips { display: flex; gap: 6px; flex-wrap: wrap; }
 .chip { font-family: var(--mono); font-size: 0.78rem; font-weight: 500; color: var(--muted); cursor: pointer;
   background: transparent; border: 1px dashed var(--line); border-radius: 6px; padding: 2px 8px; }
-.chip:hover { color: var(--accent-ink); border-color: var(--accent); border-style: solid; }
+.chip:hover { color: var(--accent); border-color: var(--accent); border-style: solid; }
 .bank.bare + .bank:not(.bare) { margin-top: 24px; }
 
 footer { margin-top: 40px; display: flex; gap: 16px; flex-wrap: wrap; align-items: center; color: var(--muted); font-size: 0.85rem; }
-.link { font: inherit; background: none; border: 0; padding: 0; color: var(--accent-ink); cursor: pointer; text-decoration: underline; text-underline-offset: 2px; }
+.link { font: inherit; background: none; border: 0; padding: 0; color: var(--accent); cursor: pointer; text-decoration: underline; text-underline-offset: 2px; }
 
 dialog { border: 1px solid var(--line); border-radius: 14px; padding: 0; width: min(480px, calc(100vw - 32px));
   background: var(--surface); color: var(--fg); }
 dialog::backdrop { background: rgb(0 0 0 / 0.45); }
 form { display: grid; gap: 14px; padding: 20px; }
 .f-head { display: flex; align-items: baseline; gap: 10px; }
-.f-head .id { font-family: var(--mono); font-weight: 600; font-size: 1.3rem; color: var(--accent-ink); }
+.f-head .id { font-family: var(--mono); font-weight: 600; font-size: 1.3rem; color: var(--accent); }
 .f-head h2 { margin: 0; font-size: 1.1rem; font-weight: 600; }
 label { display: grid; gap: 4px; font-size: 0.85rem; color: var(--muted); }
 label input, label textarea, label select { font: inherit; font-size: 1rem; color: var(--fg); background: var(--bg);
@@ -138,17 +136,17 @@ label select { font-family: var(--mono); }
 .mod-btn svg { flex: none; width: 22px; height: 22px; }
 .mod-btn b { display: block; font-family: var(--mono); font-size: 0.8rem; font-weight: 600; color: var(--fg); }
 .mod-btn small { display: block; font-size: 0.72rem; line-height: 1.2; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-.mod-btn[aria-pressed="true"] { border-color: var(--accent); background: var(--accent-soft); color: var(--accent-ink); }
+.mod-btn[aria-pressed="true"] { border-color: var(--accent); background: var(--accent-soft); color: var(--accent); }
 .mod-btn:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
 .mods-row { display: flex; gap: 4px; margin-top: 8px; }
 .mods-row svg { width: 16px; height: 16px; color: var(--line); }
-.mods-row svg.on { color: var(--accent-ink); }
+.mods-row svg.on { color: var(--accent); }
 label input:focus, label textarea:focus, label select:focus { outline: 2px solid var(--accent); outline-offset: 0; border-color: transparent; }
 .actions { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
 .actions .spacer { flex: 1; }
 .btn { font: inherit; font-size: 0.95rem; font-weight: 500; border-radius: 8px; padding: 8px 16px; cursor: pointer;
   border: 1px solid var(--line); background: transparent; color: var(--fg); }
-.btn.primary { background: var(--accent); border-color: var(--accent); color: var(--on-accent); }
+.btn.primary { background: var(--accent); border-color: var(--accent); color: var(--surface); }
 .btn.danger { color: var(--danger); border-color: transparent; padding-left: 4px; padding-right: 4px; }
 .btn.danger.armed { border-color: var(--danger); padding-left: 12px; padding-right: 12px; }
 
@@ -163,7 +161,7 @@ label input:focus, label textarea:focus, label select:focus { outline: 2px solid
 .seg { display: flex; border: 1px solid var(--line); border-radius: 8px; overflow: hidden; }
 .seg .btn { border: 0; border-radius: 0; padding: 7px 14px; }
 .seg .btn + .btn { border-left: 1px solid var(--line); }
-.seg .btn[aria-pressed="true"] { background: var(--accent); color: var(--on-accent); }
+.seg .btn[aria-pressed="true"] { background: var(--accent); color: var(--surface); }
 .btn:disabled { opacity: 0.6; cursor: default; }
 .set-note { margin-top: 6px; }
 .toast, .update { position: fixed; left: 50%; bottom: calc(24px + env(safe-area-inset-bottom, 0px)); transform: translateX(-50%);
@@ -192,17 +190,17 @@ body.picking .card:not(.picked), body.picking .chip { border-color: var(--accent
 .bank-head .link { font-size: 0.8rem; }
 @media (max-width: 560px) { .bank-head { margin-bottom: 6px; } }
 .pick-bar { position: fixed; left: 50%; top: calc(12px + env(safe-area-inset-top, 0px)); transform: translateX(-50%); z-index: 25;
-  display: flex; gap: 12px; align-items: center; background: var(--accent); color: var(--on-accent); font-weight: 500;
+  display: flex; gap: 12px; align-items: center; background: var(--accent); color: var(--surface); font-weight: 500;
   padding: 8px 8px 8px 16px; border-radius: 12px; box-shadow: 0 6px 24px rgb(0 0 0 / 0.25); max-width: calc(100% - 32px); }
-.pick-bar .btn { border-color: var(--on-accent); color: var(--on-accent); padding: 4px 12px; }
+.pick-bar .btn { border-color: var(--surface); color: var(--surface); padding: 4px 12px; }
 .icon-btn { position: relative; }
 .icon-btn.alert::after { content: ""; position: absolute; top: 6px; right: 6px; width: 8px; height: 8px; border-radius: 50%; background: var(--danger); }
 .sync-box { display: grid; gap: 10px; flex-basis: 100%; padding: 0; }
 .sync-box .row-btns { display: flex; gap: 8px; flex-wrap: wrap; }
-.cap.ok { color: var(--accent-ink); }
+.cap.ok { color: var(--accent); }
 .cap.problem { color: var(--danger); }
 .howto { font-size: 0.85rem; color: var(--muted); }
-.howto summary { cursor: pointer; color: var(--accent-ink); }
+.howto summary { cursor: pointer; color: var(--accent); }
 .howto ol { padding-left: 20px; margin: 6px 0; }
 .howto p { margin: 6px 0; }
 .btn.armed { border-color: var(--danger); color: var(--danger); }
@@ -1083,7 +1081,7 @@ sync.run();
 <script>
 // Offline support + updates. See sw.js.
 // The version shown in Settings. tools/bump.sh keeps this in step with VERSION in sw.js.
-window.APP_VERSION = 'v10';
+window.APP_VERSION = 'v11';
 (async () => {
   if (!('serviceWorker' in navigator)) return;
   const reg = await navigator.serviceWorker.register('sw.js');

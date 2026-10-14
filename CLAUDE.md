@@ -46,6 +46,8 @@ with this section (copy it from any other app) plus an "## This app" section.
 <!-- shared-preferences:end -->
 
 ## This app
+- Colors: this app keeps its OWN orange (#c2410c light / #fb923c dark, white text on filled orange) and greys, and
+  its original icon. The shared bright-orange palette was tried here (Oct 2026) and David had it reverted. Leave as is.
 
 The presets on David's Mooer GE150 Pro Li pedal: 50 banks × slots A–D (e.g. 2A), each with name, style, notes
 and the modules in use. Live: https://davyrockett.github.io/ge150-presets/ See README.md for features.

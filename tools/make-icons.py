@@ -5,7 +5,7 @@ from PIL import Image, ImageDraw, ImageFont
 OUT = Path(__file__).resolve().parent.parent / "icons"
 BG = (20, 20, 19)          # dark page background
 BODY = (44, 43, 40)        # pedal housing
-SCREEN = (255, 148, 51)    # orange display (the apps' orange)
+SCREEN = (251, 146, 60)    # orange display
 INK = (20, 20, 19)
 METAL = (200, 196, 188)
 
