@@ -2,13 +2,14 @@
 //
 // IMPORTANT: whenever any file below changes, bump VERSION.
 // That is how phones and iPads learn there's an update to download.
-const VERSION = 'v11';
+const VERSION = 'v12';
 const CACHE = `presets-${VERSION}`;
 const FONTS = 'presets-fonts';
 
 const ASSETS = [
   './',
   './index.html',
+  './move.js',
   './manifest.webmanifest',
   './icons/icon-192.png',
   './icons/icon-512.png',
