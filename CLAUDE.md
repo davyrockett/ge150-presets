@@ -54,7 +54,7 @@ with this section (copy it from any other app) plus an "## This app" section.
   its original icon. The shared bright-orange palette was tried here (Oct 2026) and David had it reverted. Leave as is.
 
 The presets on David's Mooer GE150 Pro Li pedal: 50 banks × slots A–D (e.g. 2A), each with name, style, notes
-and the modules in use. Live: https://davyrockett.github.io/ge150-presets/ See README.md for features.
+and the modules in use. Live: https://www.davyrockett.com/ge150-presets/ See README.md for features.
 
 - **Publish:** run `tools/bump.sh` (bumps `sw.js` and index.html together), commit, push, confirm live.
 - **Test locally:** `python3 -m http.server 8767` here, open http://localhost:8767/.
