@@ -14,6 +14,7 @@
 <meta name="theme-color" content="#f2f1ee" media="(prefers-color-scheme: light)">
 <meta name="theme-color" content="#141413" media="(prefers-color-scheme: dark)">
 <script src="move.js" data-keep="ge150." data-synced="ge150.data"></script>
+<script src="suite.js" defer></script>
 <script>
 const THEME_BG = { light: '#f2f1ee', dark: '#141413' };
 function applyTheme(t) {
@@ -1082,7 +1083,7 @@ sync.run();
 <script>
 // Offline support + updates. See sw.js.
 // The version shown in Settings. tools/bump.sh keeps this in step with VERSION in sw.js.
-window.APP_VERSION = 'v12';
+window.APP_VERSION = 'v13';
 (async () => {
   if (!('serviceWorker' in navigator)) return;
   const reg = await navigator.serviceWorker.register('sw.js');
