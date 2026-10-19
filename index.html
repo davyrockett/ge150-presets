@@ -15,6 +15,7 @@
 <meta name="theme-color" content="#141413" media="(prefers-color-scheme: dark)">
 <script src="move.js" data-keep="ge150." data-synced="ge150.data"></script>
 <script src="suite.js" defer></script>
+<script src="share.js" defer></script>
 <script>
 const THEME_BG = { light: '#f2f1ee', dark: '#141413' };
 function applyTheme(t) {
@@ -300,6 +301,7 @@ body.picking .card:not(.picked), body.picking .chip { border-color: var(--accent
         </details>
       </form>
     </div>
+    <div class="set-row" data-share><div><b>Share this app</b><p class="cap" data-share-link></p></div><div style="display:flex;gap:8px;flex-wrap:wrap;justify-content:flex-end"><button type="button" class="btn" data-share-copy>Copy link</button><button type="button" class="btn" data-share-send hidden>Share…</button></div></div>
     <div class="set-row"><div><b>App version</b><p class="cap" id="ver-line"></p></div><button type="button" class="btn" id="set-update">Check for updates</button></div>
     <p class="cap set-note">Appearance and your key are saved on this device only.</p>
   </div>
@@ -1083,7 +1085,7 @@ sync.run();
 <script>
 // Offline support + updates. See sw.js.
 // The version shown in Settings. tools/bump.sh keeps this in step with VERSION in sw.js.
-window.APP_VERSION = 'v13';
+window.APP_VERSION = 'v14';
 (async () => {
   if (!('serviceWorker' in navigator)) return;
   const reg = await navigator.serviceWorker.register('sw.js');
