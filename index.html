@@ -488,8 +488,17 @@ function openEdit(id) {
   updateMove();
   disarmClear();
   $('edit').showModal();
+  editSaved = editState();
   $('f-name').focus();
 }
+
+// A tap outside the editor closes it, like Cancel, but asks first if anything changed.
+let editSaved = '';
+const editState = () => JSON.stringify([$('f-name').value, $('f-style').value, $('f-notes').value, $('f-slot').value,
+  [...$('f-mods').children].map(b => b.getAttribute('aria-pressed'))]);
+$('edit').addEventListener('click', e => {
+  if (e.target === $('edit') && (editState() === editSaved || confirm('Discard your changes?'))) $('edit').close();
+});
 
 function fillSlots(current) {
   const sel = $('f-slot');
@@ -1085,7 +1094,7 @@ sync.run();
 <script>
 // Offline support + updates. See sw.js.
 // The version shown in Settings. tools/bump.sh keeps this in step with VERSION in sw.js.
-window.APP_VERSION = 'v18';
+window.APP_VERSION = 'v19';
 (async () => {
   if (!('serviceWorker' in navigator)) return;
   const reg = await navigator.serviceWorker.register('sw.js');
